@@ -5,52 +5,89 @@
 
 # Only needed for access to command line arguments
 import sys
-import logging
+import os
+
+from typing import Any
+
+from openpyxl import load_workbook
+from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 
 from PyQt6.QtWidgets import (
         QApplication,
         QWidget,
         QTableWidget,
         QVBoxLayout,
+        QFileDialog,
+        QTableWidgetItem,
         QDialogButtonBox)
 
 __version__ = "0.0.1"
 
-logger = logging.getLogger(__name__)
-columnList = ("barcode", "name", "price", "cost")
 
-class TableView(QTableWidget):
+class TableWidget(QTableWidget):
     def __init__(self, *args):
+        columnList = ("barcode", "default_code", "name", "price", "cost")
         QTableWidget.__init__(self, *args)
-        columnNumber = len(columnList)
-        self.setColumnCount(columnNumber)
+        self.setColumnCount(len(columnList))
         self.setHorizontalHeaderLabels(columnList)
+
+    def setItem(self, row: int, column: int, item: Any):
+        if item is None:
+            return
+        super().setItem(row, column, QTableWidgetItem(str(item)))
 
 
 class Window(QWidget):
+    def searchColumn(workbook: ReadOnlyWorksheet, column_name: str):
+        header_row = map(lambda x :x.value, next(workbook.rows))
+        for header_column in header_row:
+            pass
+
+
+    def loadExcel(self):
+        excelFile, _ = QFileDialog.getOpenFileName(
+                self,
+                'Select Excel file',
+                os.getcwd(),
+                "Excel files (*.xls *.xlsx *.xlsm)")
+        if not excelFile:
+            return
+        wb = load_workbook(filename=excelFile, read_only=True, data_only=True)
+        sheet = wb[wb.sheetnames[0]]  # only the first
+
+        iter_rows = sheet.iter_rows()
+        next(iter_rows)  # discard header
+        for index, row in enumerate(iter_rows):
+            self.mainTable.setRowCount(self.mainTable.rowCount() + 1)
+            for column, item in enumerate(row):
+                self.mainTable.setItem(index, column, item.value)
+
+        wb.close()
+        pass
+
+
+    def mainButtonsBehaviour(self, button):
+        # TODO search other way different to check the text
+        if button.text() == "Apply":
+            return
+
+        if button.text() == "Open":
+            self.loadExcel()
+            return
+
+        raise NotImplementedError("Unknown button")
+
     def __init__(self, *args):
         QWidget.__init__(self, *args)
         layout = QVBoxLayout()
-        table = TableView()
+        self.mainTable = TableWidget()
         mainButtons = QDialogButtonBox(
                 QDialogButtonBox.StandardButton.Apply
                 | QDialogButtonBox.StandardButton.Open)
         mainButtons.clicked.connect(self.mainButtonsBehaviour)
-        layout.addWidget(table)
+        layout.addWidget(self.mainTable)
         layout.addWidget(mainButtons)
         self.setLayout(layout)
-
-    def mainButtonsBehaviour(self, button):
-        # TODO search other way
-        if button.text() == "Apply":
-            logger.info("click 1")
-            return
-
-        if button.text() == "Open":
-            logger.info("click 2")
-            return
-
-        raise NotImplementedError("Unknown button")
 
 
 # You need one (and only one) QApplication instance per application.
