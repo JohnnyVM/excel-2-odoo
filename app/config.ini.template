@@ -1,1 +1,7 @@
-[default]
+[odoo]
+host=
+port=
+user=
+password=
+database=
+
