@@ -61,6 +61,6 @@ class TableWidget(QTableWidget):
 
         len_hn = len(self.headerNames)
         len_chn = len(self.comboHeaderNames)
-        for row in range(rows - current_rows):
+        for row in range(current_rows, rows, 1):
             for column in range(len_hn, len_hn+len_chn+1, 1):
                 self.setCellWidget(row, column, ComboWidget("lal", ("trara",)))
