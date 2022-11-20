@@ -1,6 +1,8 @@
 import os
 
 from PyQt6.QtWidgets import (
+        QHBoxLayout,
+        QFormLayout,
         QWidget,
         QFileDialog,
         QVBoxLayout,
@@ -13,6 +15,7 @@ from openpyxl.worksheet._read_only import ReadOnlyWorksheet
 from .mainTable import TableWidget
 from ..dependencies import get_odoo
 from ..schema import ProductTemplate
+from .odoocombobox import OdooComboBox
 
 
 class MainWindow(QWidget):
@@ -108,6 +111,28 @@ class MainWindow(QWidget):
                 QDialogButtonBox.StandardButton.Apply
                 | QDialogButtonBox.StandardButton.Open)
         self.mainButtons.clicked.connect(self.mainButtonsBehaviour)
+
+        formPlaceholder = QHBoxLayout()
+        companyForm = QFormLayout()
+        combobox = OdooComboBox()
+        combobox.loadModel('res.company')
+        companyForm.addRow("company", combobox)
+
+        tableForm = QFormLayout()
+        combobox = OdooComboBox()
+        combobox.loadModel('account.tax')
+        tableForm.addRow("Impuestos de venta", combobox)
+        combobox = OdooComboBox()
+        combobox.loadModel('account.tax')
+        tableForm.addRow("Impuestos de venta", combobox)
+        combobox = OdooComboBox()
+        combobox.loadModel('product.category')
+        tableForm.addRow("Categoria", combobox)
+
+        formPlaceholder.addLayout(companyForm)
+        formPlaceholder.addLayout(tableForm)
+
+        layout.addLayout(formPlaceholder)
         layout.addWidget(self.mainTable)
         layout.addWidget(self.mainButtons)
         self.setLayout(layout)

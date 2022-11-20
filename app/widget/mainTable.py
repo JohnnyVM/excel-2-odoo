@@ -17,7 +17,7 @@ class TableWidget(QTableWidget):
             "taxes_id": "account.tax",
             "supplier_taxes_id": "account.tax",
             "categ_id": "product.category"}
-    __envList: dict = {}
+    __envList: dict = {}  # OdooComboBox table cache
 
     def __init__(self, *args):
         QTableWidget.__init__(self, *args)
