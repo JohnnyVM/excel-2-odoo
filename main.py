@@ -10,7 +10,8 @@ import configparser
 from PyQt6.QtWidgets import QApplication
 
 from app.widget import mainWindow
-from app.settings import Settings
+from app import settings
+
 
 DEFAULT_CONFIG_FILE = 'config.ini'
 
@@ -29,9 +30,9 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read(DEFAULT_CONFIG_FILE)
 
-    settings = Settings(config=config)
+    settings.init(config=config)
 
-    window = mainWindow.MainWindow(settings)
+    window = mainWindow.MainWindow(settings.conf)
     window.show()  # IMPORTANT!!!!! Windows are hidden by default.
 
     sys.exit(app.exec())

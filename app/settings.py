@@ -2,10 +2,12 @@ from configparser import ConfigParser
 
 
 class Settings(dict):
+    """ refactor this """
     __values = {
         "odoo": {
             "port": 8069,
-            "host": "localhost"
+            "host": "localhost",
+            "database": "odoo",
             }
         }
 
@@ -19,4 +21,14 @@ class Settings(dict):
         if key in self.__values:
             return self.__values[key]
 
-        return self.__getitem__(key)
+        return super().__getitem__(key)
+
+    def __hash__(self):
+        d = dict(self)
+        d.update(self.__values)
+        return hash(frozenset(d))
+
+
+def init(config: ConfigParser, *args, **kwargs):
+    global conf
+    conf = Settings(config, *args, **kwargs)
