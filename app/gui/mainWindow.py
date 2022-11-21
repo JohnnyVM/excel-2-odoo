@@ -1,4 +1,5 @@
 import os
+from functools import partial
 
 from PyQt6.QtWidgets import (
         QHBoxLayout,
@@ -101,6 +102,34 @@ class MainWindow(QWidget):
 
         raise NotImplementedError("Unknown button")
 
+    def set_beahviour(self):
+        def clean_update(combo: OdooComboBox, company_id: int):
+            combo.clear()
+            combo.update(['|', ("company_id", "=", company_id), ("company_id", "=", False)])
+
+        self.company_combobox.currentIndexChanged.connect(
+                lambda c_id: partial(clean_update, self.sales_combobox)(c_id))
+        self.company_combobox.currentIndexChanged.connect(
+                lambda c_id: partial(clean_update, self.purchase_combobox)(c_id))
+
+        def update_sales_column(idx: int):
+            data = self.sales_combobox.currentData()
+            self.mainTable.update_sales_column(data)
+        self.sales_combobox.currentIndexChanged.connect(
+                update_sales_column)
+
+        def update_purchase_column(idx: int):
+            data = self.purchase_combobox.currentData()
+            self.mainTable.update_purchase_column(data)
+        self.purchase_combobox.currentIndexChanged.connect(
+                update_purchase_column)
+
+        def update_category_column(idx: int):
+            data = self.category_combobox.currentData()
+            self.mainTable.update_category_column(data)
+        self.category_combobox.currentIndexChanged.connect(
+                update_category_column)
+
     def __init__(self, settings, *args):
         QWidget.__init__(self, *args)
 
@@ -114,20 +143,18 @@ class MainWindow(QWidget):
 
         formPlaceholder = QHBoxLayout()
         companyForm = QFormLayout()
-        combobox = OdooComboBox()
-        combobox.loadModel('res.company')
-        companyForm.addRow("company", combobox)
+        self.company_combobox = OdooComboBox('res.company')
+        self.company_combobox.update()
+        companyForm.addRow("company", self.company_combobox)
 
         tableForm = QFormLayout()
-        combobox = OdooComboBox()
-        combobox.loadModel('account.tax')
-        tableForm.addRow("Impuestos de venta", combobox)
-        combobox = OdooComboBox()
-        combobox.loadModel('account.tax')
-        tableForm.addRow("Impuestos de venta", combobox)
-        combobox = OdooComboBox()
-        combobox.loadModel('product.category')
-        tableForm.addRow("Categoria", combobox)
+        self.sales_combobox = OdooComboBox('account.tax', domain=[("type_tax_use", "=", "sale")])
+        tableForm.addRow("Impuestos de venta", self.sales_combobox)
+        self.purchase_combobox = OdooComboBox('account.tax', domain=[("type_tax_use", "=", "purchase")])
+        tableForm.addRow("Impuestos de venta", self.purchase_combobox)
+        self.category_combobox = OdooComboBox('product.category')
+        self.category_combobox.update()
+        tableForm.addRow("Categoria", self.category_combobox)
 
         formPlaceholder.addLayout(companyForm)
         formPlaceholder.addLayout(tableForm)
@@ -136,3 +163,5 @@ class MainWindow(QWidget):
         layout.addWidget(self.mainTable)
         layout.addWidget(self.mainButtons)
         self.setLayout(layout)
+
+        self.set_beahviour()

@@ -19,6 +19,21 @@ class TableWidget(QTableWidget):
             "categ_id": "product.category"}
     __envList: dict = {}  # OdooComboBox table cache
 
+    def _updateComboColumn(self, column, userData: int):
+        for row in range(self.rowCount()):
+            combo = self.cellWidget(row, column)
+            idx = combo.findData(userData)
+            combo.setCurrentIndex(idx)
+
+    def update_sales_column(self, userData: int):
+        self._updateComboColumn(5, userData)
+
+    def update_purchase_column(self, userData: int):
+        self._updateComboColumn(6, userData)
+
+    def update_category_column(self, userData: int):
+        self._updateComboColumn(7, userData)
+
     def __init__(self, *args):
         QTableWidget.__init__(self, *args)
         len_hn = len(self.headerNames)
@@ -37,8 +52,9 @@ class TableWidget(QTableWidget):
             if value not in self.__envList:
                 self.__envList[value] = []
                 ids = odoo.env[value].search([])
-                qInfo("Loading model {name} with domain {domain} records: {ids}".format(
-                            name=value, domain=domain, ids=ids))
+                qInfo("Loading model:"
+                      " {name} with domain {domain} records: {ids}"
+                      .format(name=value, domain=domain, ids=ids))
                 models = odoo.execute_kw(
                             value,
                             'read',
@@ -70,7 +86,7 @@ class TableWidget(QTableWidget):
                 for idx in range(len(self.headerNames))]
 
     def setRowCount(self, rows: int):
-        """ Add by default the column iva_provider, iva sales and category """
+        """ Add by default the column iva provider, iva sales and category """
         current_rows = super().rowCount()
         super().setRowCount(rows)
         if current_rows >= rows:
@@ -83,14 +99,7 @@ class TableWidget(QTableWidget):
             items = tuple(self.comboHeaderNames.items())
 
             for column in range(len_hn, len_hn+len_chn, 1):
-                domain = []
-                key, value = items[i]
-                if key == "taxes_id":
-                    domain = [("type_tax_use", "=", "sale")]
-                if key == "supplier_taxes_id":
-                    domain = [("type_tax_use", "=", "purchase")]
-                self.setCellWidget(
-                        row,
-                        column,
-                        OdooComboBox(self.__envList[value], domain=domain))
+                combo = OdooComboBox(items[i][1])
+                combo.loadModels(self.__envList[items[i][1]])
+                self.setCellWidget(row, column, combo)
                 i += 1
