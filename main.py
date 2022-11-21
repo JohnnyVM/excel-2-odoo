@@ -9,7 +9,7 @@ import configparser
 
 from PyQt6.QtWidgets import QApplication
 
-from app.widget import mainWindow
+from app.gui import mainWindow
 from app import settings
 
 

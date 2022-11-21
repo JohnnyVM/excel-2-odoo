@@ -10,17 +10,24 @@ from ..dependencies import get_odoo
 class OdooComboBox(QComboBox):
     """ """
 
-    def __init__(self, models: list[schema.OdooModel] = None):
+    domain: list = []
+
+    def __init__(self, models: list[schema.OdooModel] = None, **kwargs):
         QComboBox.__init__(self)
         if models:
             for model in models:
                 self.addItem(model.display_name, userData=model.id)
 
+        if 'domain' in kwargs:
+            self.domain += kwargs['domain']
+
     def loadModel(self, model_name: str, domain: list = []):
         odoo = get_odoo(settings.conf)
-        ids = odoo.env[model_name].search(domain)
-        qInfo("OdooComboBox: Loading model {name} with domain {domain} records: {ids}".format(
-                            name=model_name, domain=domain, ids=ids))
+        _domain = domain + self.domain
+        ids = odoo.env[model_name].search(_domain)
+        qInfo("OdooComboBox: "
+              "Loading model {name} with domain {domain} records: {ids}"
+              .format(name=model_name, domain=_domain, ids=ids))
         models = odoo.execute_kw(
                             model_name,
                             'read', [ids], {'fields': ['id', 'display_name']})

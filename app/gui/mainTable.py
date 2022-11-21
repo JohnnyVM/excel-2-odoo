@@ -80,10 +80,17 @@ class TableWidget(QTableWidget):
         len_chn = len(self.comboHeaderNames)
         for row in range(current_rows, rows, 1):
             i = 0
-            items = tuple(self.comboHeaderNames.values())
+            items = tuple(self.comboHeaderNames.items())
+
             for column in range(len_hn, len_hn+len_chn, 1):
+                domain = []
+                key, value = items[i]
+                if key == "taxes_id":
+                    domain = [("type_tax_use", "=", "sale")]
+                if key == "supplier_taxes_id":
+                    domain = [("type_tax_use", "=", "purchase")]
                 self.setCellWidget(
                         row,
                         column,
-                        OdooComboBox(self.__envList[items[i]]))
+                        OdooComboBox(self.__envList[value], domain=domain))
                 i += 1
