@@ -12,7 +12,7 @@ from .odoocombobox import OdooComboBox
 
 class TableWidget(QTableWidget):
     headerNames = (
-            "barcode", "default_code", "name", "list_price", "standard_price")
+            "barcode", "default_code", "name", "product_qty", "list_price", "standard_price")
     comboHeaderNames = {
             "taxes_id": "account.tax",
             "supplier_taxes_id": "account.tax",
@@ -26,13 +26,13 @@ class TableWidget(QTableWidget):
             combo.setCurrentIndex(idx)
 
     def update_sales_column(self, userData: int):
-        self._updateComboColumn(5, userData)
-
-    def update_purchase_column(self, userData: int):
         self._updateComboColumn(6, userData)
 
-    def update_category_column(self, userData: int):
+    def update_purchase_column(self, userData: int):
         self._updateComboColumn(7, userData)
+
+    def update_category_column(self, userData: int):
+        self._updateComboColumn(8, userData)
 
     def __init__(self, *args):
         QTableWidget.__init__(self, *args)
@@ -44,10 +44,6 @@ class TableWidget(QTableWidget):
 
         odoo = get_odoo(settings.conf)
         for key, value in self.comboHeaderNames.items():
-            #fields = odoo.execute_kw(
-            #        key, 'fields_get', [], {'attributes': []})
-            #if 'company_id' in fields:
-            #    domain = [('company_id', '=', )]
             domain = []
             if value not in self.__envList:
                 self.__envList[value] = []
@@ -75,15 +71,15 @@ class TableWidget(QTableWidget):
                 return False
         return True
 
-    def rowAt(self, row: int):
-        return [self.item(row, column) for column in range(self.columnCount())]
+    # def rowAt(self, row: int):
+    #     return [self.item(row, column) for column in range(self.columnCount())]
 
-    def columnAt(self, column: int):
-        return [self.item(row, column) for row in range(self.rowCount())]
+    # def columnAt(self, column: int):
+    #     return [self.item(row, column) for row in range(self.rowCount())]
 
-    def headers(self):
-        return [self.horizontalHeaderItem(idx)
-                for idx in range(len(self.headerNames))]
+    # def headers(self):
+    #     return [self.horizontalHeaderItem(idx)
+    #             for idx in range(len(self.headerNames + tuple(self.comboHeaderNames.keys())))]
 
     def setRowCount(self, rows: int):
         """ Add by default the column iva provider, iva sales and category """
@@ -97,7 +93,6 @@ class TableWidget(QTableWidget):
         for row in range(current_rows, rows, 1):
             i = 0
             items = tuple(self.comboHeaderNames.items())
-
             for column in range(len_hn, len_hn+len_chn, 1):
                 combo = OdooComboBox(items[i][1])
                 combo.loadModels(self.__envList[items[i][1]])

@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
         QFileDialog,
         QVBoxLayout,
         QDialogButtonBox)
-from PyQt6.QtCore import qInfo
+from PyQt6.QtCore import qInfo, qDebug
 
 from openpyxl import load_workbook
 from openpyxl.worksheet._read_only import ReadOnlyWorksheet
@@ -20,6 +20,28 @@ from .odoocombobox import OdooComboBox
 
 
 class MainWindow(QWidget):
+
+    def rowToProduct(self, row: int) -> dict:
+        new_product = {"type": "product", "available_in_pos": True}
+        for column in range(self.mainTable.columnCount()):
+            if column < len(self.mainTable.headerNames) and self.mainTable.item(row, column):
+                new_product.update({
+                    self.mainTable.horizontalHeaderItem(column).text():
+                    self.mainTable.item(row, column).text()
+                    })
+
+            if column in (6, 7) and self.mainTable.cellWidget(row, column):
+                new_product.update({
+                    self.mainTable.horizontalHeaderItem(column).text():
+                    [int(self.mainTable.cellWidget(row, column).currentData())]
+                    })
+
+            if column in (8,) and self.mainTable.cellWidget(row, column):
+                new_product.update({
+                    self.mainTable.horizontalHeaderItem(column).text():
+                    int(self.mainTable.cellWidget(row, column).currentData())
+                    })
+        return new_product
 
     def searchColumn(workbook: ReadOnlyWorksheet, column_name: str):
         header_row = map(lambda x: x.value, next(workbook.rows))
@@ -63,7 +85,7 @@ class MainWindow(QWidget):
 
     def sendToOdoo(self):
         odoo = get_odoo(self.settings)
-        excel_barcodes = set(bar.text() for bar in self.mainTable.columnAt(0) if bar is not None)  # column 0 is barcode
+        excel_barcodes = set(bar.text() for bar in [self.mainTable.item(row, 0) for row in range(self.mainTable.rowCount())] if bar is not None)  # column 0 is barcode
         products_ids = odoo.env['product.template'].search([('barcode', 'in', tuple(excel_barcodes))])
 
         products = []
@@ -76,19 +98,26 @@ class MainWindow(QWidget):
         qInfo("{} products to create".format(len(create_barcodes)))
 
         productOdoo = odoo.env['product.template']
-        headers = [i.text() for i in self.mainTable.headers()]
         for barcode in create_barcodes:
-            for row, bar in enumerate(self.mainTable.columnAt(0)):
+            for row, bar in enumerate([self.mainTable.item(row, 0) for row in range(self.mainTable.rowCount())]):
                 if bar.text() == barcode:
-                    new_product = {"type": "product", "available_in_pos": True}
-                    for idx, value in enumerate(self.mainTable.rowAt(row)):
-                        if value is not None:
-                            new_product.update({headers[idx]: value.text()})
+                    new_product = self.rowToProduct(row)
                     pt = ProductTemplate(**new_product)
                     p_id = productOdoo.create([pt.dict()])
-                    qInfo("product({name}) created with id {id}".format(
-                        name=pt.name, id=p_id))
-                    pt.id = p_id
+                    if p_id:
+                        qInfo("product({name}){values} created with id {id}".format(
+                            name=pt.name, values=new_product, id=p_id))
+
+        update_barcodes = odoo_barcodes & excel_barcodes
+        for barcode in update_barcodes:
+            for row, bar in enumerate([self.mainTable.item(row, 0) for row in range(self.mainTable.rowCount())]):
+                if bar.text() == barcode:
+                    new_product_price = self.rowToProduct(row)
+                    pt = ProductTemplate(**new_product_price)
+                    op = tuple(filter(lambda p: new_product_price['barcode'] == p.barcode, products))[0]
+                    odoo.execute_kw('product.template', 'write', [[op.id], {'list_price': pt.list_price}])
+                    qInfo("product({id}) update {values}".format(
+                            id=op.id, values={'list_price': pt.list_price}))
 
     def mainButtonsBehaviour(self, button):
         # TODO search other way different to check the text
