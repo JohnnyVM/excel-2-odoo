@@ -46,6 +46,8 @@ class TableWidget(QTableWidget):
         for key, value in self.comboHeaderNames.items():
             domain = []
             if value not in self.__envList:
+                if value == "account.tax":
+                    domain = [("active", "=", True)]
                 self.__envList[value] = []
                 ids = odoo.env[value].search([])
                 qInfo("Loading model:"

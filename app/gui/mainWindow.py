@@ -177,9 +177,9 @@ class MainWindow(QWidget):
         companyForm.addRow("company", self.company_combobox)
 
         tableForm = QFormLayout()
-        self.sales_combobox = OdooComboBox('account.tax', domain=[("type_tax_use", "=", "sale")])
+        self.sales_combobox = OdooComboBox('account.tax', domain=[("active", "=", True), ("type_tax_use", "=", "sale")])
         tableForm.addRow("Impuestos de venta", self.sales_combobox)
-        self.purchase_combobox = OdooComboBox('account.tax', domain=[("type_tax_use", "=", "purchase")])
+        self.purchase_combobox = OdooComboBox('account.tax', domain=[("active", "=", True), ("type_tax_use", "=", "purchase")])
         tableForm.addRow("Impuestos de venta", self.purchase_combobox)
         self.category_combobox = OdooComboBox('product.category')
         self.category_combobox.update()
