@@ -1,6 +1,12 @@
 from typing import Any
 
-from PyQt6.QtCore import QAbstractTableModel, QObject, QModelIndex, Qt, qInfo, QVariant
+from PyQt6.QtCore import (
+        QAbstractTableModel,
+        QObject,
+        QModelIndex,
+        Qt,
+        qInfo,
+        QVariant)
 
 import odoorpc
 
@@ -13,8 +19,7 @@ class OdooModel(QAbstractTableModel):
     _fields: dict
     __data: list[dict]
 
-    def __init__(
-        self, conn: odoorpc.ODOO, name: str, parent: QObject = None, **kwargs):
+    def __init__(self, conn: odoorpc.ODOO, name: str, parent: QObject = None, **kwargs):
         """ """
         QAbstractTableModel.__init__(self, parent)
         self._name = name
@@ -35,7 +40,7 @@ class OdooModel(QAbstractTableModel):
         search_fields = tuple(field for field in self._fields.keys())
         qInfo(f"{self.__class__.__name__}: {self._name} search_read {self.domain} {search_fields}")
         self.__data = self._conn.execute_kw(self._name, "search_read", self.domain, {'fields': search_fields})
-    
+
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self._fields)
 
@@ -45,6 +50,7 @@ class OdooModel(QAbstractTableModel):
     def data(self, index: QModelIndex, role: int = ...) -> Any:
         if not index.isValid():
             return QVariant()
+
         if role == Qt.ItemDataRole.DisplayRole:
             field_name = tuple(self._fields.keys())[index.column()]
             return self.__data[index.row()][field_name]
@@ -55,12 +61,16 @@ class OdooModel(QAbstractTableModel):
         if orientation == Qt.Orientation.Horizontal:
             if section > self.columnCount():
                 raise IndexError()
+
             if role == Qt.DisplayRole:
                 return tuple(field for field in self._fields)[section]
 
         if orientation == Qt.Orientation.Vertical:
             if section > self.rowCount():
                 raise IndexError()
-                
 
         return super().headerData(section, orientation, role)
+
+    def fieldNameColumn(self, name: str) -> int:
+        """ Helper to return the column index by name """
+        return tuple(self._fields.keys()).index(name)
