@@ -8,6 +8,7 @@ from ...dependencies import get_odoo
 
 from ..model.odoomodel import OdooModel
 from ..widget.odoocombobox import OdooComboBox
+from ..widget.odootableview import OdooTableView
 
 
 class MainWindow(QWidget):
@@ -32,7 +33,16 @@ class MainWindow(QWidget):
         self.company_selector.currentIndexChanged.connect(self.set_company)
         self.company_selector.setModel(company_model)
 
+        product_model = OdooModel(
+            conn=conn,
+            name='product.template',
+            domain=[[('purchase_ok', '=', True)]],
+            fields=('barcode', 'default_code', 'name', 'categ_id'))
+        self.purchaseTable = OdooTableView(parent=self)
+        self.purchaseTable.setModel(product_model)
+
         layout = QVBoxLayout()
         layout.addWidget(self.company_selector)
+        layout.addWidget(self.purchaseTable)
 
         self.setLayout(layout)

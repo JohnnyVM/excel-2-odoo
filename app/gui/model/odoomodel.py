@@ -1,12 +1,13 @@
 from typing import Any
 
 from PyQt6.QtCore import (
-        QAbstractTableModel,
-        QObject,
-        QModelIndex,
-        Qt,
-        qInfo,
-        QVariant)
+    QAbstractTableModel,
+    QObject,
+    QModelIndex,
+    Qt,
+    qInfo,
+    qDebug,
+    QVariant)
 
 import odoorpc
 
@@ -39,7 +40,13 @@ class OdooModel(QAbstractTableModel):
     def _load(self):
         search_fields = tuple(field for field in self._fields.keys())
         qInfo(f"{self.__class__.__name__}: {self._name} search_read {self.domain} {search_fields}")
-        self.__data = self._conn.execute_kw(self._name, "search_read", self.domain, {'fields': search_fields})
+        self.__data = self._conn.execute_kw(
+            self._name,
+            "search_read",
+            self.domain,
+            {'fields': search_fields})
+        n_records = len(self.__data)
+        qDebug(f"{self.__class__.__name__}: Fetched {n_records} records")
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self._fields)
@@ -62,7 +69,7 @@ class OdooModel(QAbstractTableModel):
             if section > self.columnCount():
                 raise IndexError()
 
-            if role == Qt.DisplayRole:
+            if role == Qt.ItemDataRole.DisplayRole:
                 return tuple(field for field in self._fields)[section]
 
         if orientation == Qt.Orientation.Vertical:
