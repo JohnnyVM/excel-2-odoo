@@ -16,8 +16,8 @@ class OdooComboBox(QComboBox):
         self.setModelColumn(model.fieldNameColumn(display_field))
 
     def itemData(self, index: int, role: int = Qt.ItemDataRole.UserRole):
+        model = self.model()
         if role == Qt.ItemDataRole.UserRole:
-            model = self.model()
             column = model.fieldNameColumn('id')
             return model.data(model.index(index, column), Qt.ItemDataRole.DisplayRole)
 
@@ -31,3 +31,5 @@ class OdooComboBox(QComboBox):
             return model.data(model.index(index, column), Qt.ItemDataRole.DisplayRole)
 
         return super().currentData(role)
+
+    #def findData

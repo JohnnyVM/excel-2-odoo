@@ -44,7 +44,13 @@ class MainWindow(QWidget):
                 ('active', '=', True)
             ]],
             company_id=self.company_selector.currentData(),
-            fields=('barcode', 'default_code', 'name', 'categ_id', 'taxes_id'))
+            fields=(
+                'barcode',
+                'default_code',
+                'name',
+                'categ_id',
+                'taxes_id',
+                'list_price'))
         self.changeCompany.connect(product_model.updateCompany)
         self.purchaseTable = OdooTableView(parent=self)
         self.purchaseTable.setModel(product_model)
