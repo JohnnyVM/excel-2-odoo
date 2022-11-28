@@ -1,7 +1,7 @@
-from PyQt6.QtCore import qDebug
+from PyQt6.QtCore import qDebug, pyqtSignal
 from PyQt6.QtWidgets import (
-        QWidget,
-        QVBoxLayout)
+    QWidget,
+    QVBoxLayout)
 
 from ... import settings
 from ...dependencies import get_odoo
@@ -13,12 +13,14 @@ from ..widget.odootableview import OdooTableView
 
 class MainWindow(QWidget):
     _company_id: int | None = None
+    changeCompany = pyqtSignal(int)
 
     def set_company(self, index: int) -> None:
         company_id = self.company_selector.itemData(index)
         if company_id != self._company_id:
             qDebug(f"{self.__class__.__name__}: Change company {self._company_id} -> {company_id}")
             self._company_id = company_id
+            self.changeCompany.emit(company_id)
 
     def __init__(self, parent: QWidget = None):
         QWidget.__init__(self, parent)
@@ -36,8 +38,14 @@ class MainWindow(QWidget):
         product_model = OdooModel(
             conn=conn,
             name='product.template',
-            domain=[[('purchase_ok', '=', True)]],
-            fields=('barcode', 'default_code', 'name', 'categ_id'))
+            domain=[[
+                ('sale_ok', '=', True),
+                ('purchase_ok', '=', True),
+                ('active', '=', True)
+            ]],
+            company_id=self.company_selector.currentData(),
+            fields=('barcode', 'default_code', 'name', 'categ_id', 'taxes_id'))
+        self.changeCompany.connect(product_model.updateCompany)
         self.purchaseTable = OdooTableView(parent=self)
         self.purchaseTable.setModel(product_model)
 
