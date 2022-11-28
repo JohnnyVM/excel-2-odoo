@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QVariant
 from PyQt6.QtWidgets import (QWidget, QComboBox)
 
 from ..model.odoomodel import OdooModel
@@ -32,4 +32,16 @@ class OdooComboBox(QComboBox):
 
         return super().currentData(role)
 
-    #def findData
+    def findData(
+            self,
+            data: QVariant,
+            role: int = Qt.ItemDataRole.UserRole,
+            flags: int = Qt.MatchFlag.MatchExactly | Qt.MatchFlag.MatchCaseSensitive):
+        if role == Qt.ItemDataRole.UserRole:
+            model = self.model()
+            for pos, row in enumerate(model._data):
+                if row['id'] == data:
+                    return pos
+            return -1
+
+        return super().findData(data, role, flags)

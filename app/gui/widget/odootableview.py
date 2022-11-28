@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QTableView
 
 from ..model.odoomodel import OdooModel
-from .delegate.odoocomboboxdelegate import OdooComboBoxDelegate
+from .delegate.odoocomboboxdelegate import OdooMany2OneDelegate, OdooMany2ManyDelegate
 
 
 class OdooTableView(QTableView):
@@ -12,5 +12,7 @@ class OdooTableView(QTableView):
     def setModel(self, model: OdooModel):
         super().setModel(model)
         for column, attributes in enumerate(model._fields.values()):
-            if 'relation' in attributes:
-                self.setItemDelegateForColumn(column, OdooComboBoxDelegate(parent=self))
+            if 'relation' in attributes and attributes['type'] == 'many2one':
+                self.setItemDelegateForColumn(column, OdooMany2OneDelegate(parent=self))
+            if 'relation' in attributes and attributes['type'] == 'many2many':
+                self.setItemDelegateForColumn(column, OdooMany2ManyDelegate(parent=self))
