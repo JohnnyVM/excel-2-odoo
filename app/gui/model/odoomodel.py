@@ -90,6 +90,12 @@ class OdooModel(QAbstractTableModel):
                 name=attr['relation'],
                 domain=attr['domain'],
                 fields=('id', 'display_name'))
+            column = [f for f in parent._fields.keys()].index(field)
+            nrows = parent.rowCount()
+            parent.dataChanged.emit(
+                parent.index(0, column),
+                parent.index(nrows, column),
+                [])
 
     def _loadRelationalData(self):
         futures = []
@@ -118,6 +124,10 @@ class OdooModel(QAbstractTableModel):
         n_records = len(self._data)
         qDebug(f"{self.__class__.__name__}: Fetched {n_records} records from {self._name}")
         self._loadRelationalData()
+        self.dataChanged.emit(
+            self.index(0, 0),
+            self.index(n_records, len(search_fields)),
+            [])
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self._fields)
@@ -141,6 +151,7 @@ class OdooModel(QAbstractTableModel):
             return False
         field_name = tuple(self._fields.keys())[index.column()]
         self._data[index.row()][field_name] = value
+        self.dataChanged.emit(index, index, (role,))
         return True
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = ...) -> Any:
