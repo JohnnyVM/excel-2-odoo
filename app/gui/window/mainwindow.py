@@ -1,6 +1,7 @@
 from PyQt6.QtCore import qDebug, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
+    QHeaderView,
     QVBoxLayout)
 
 from ... import settings
@@ -54,6 +55,7 @@ class MainWindow(QWidget):
         self.changeCompany.connect(product_model.updateCompany)
         self.purchaseTable = OdooTableView(parent=self)
         self.purchaseTable.setModel(product_model)
+        self.purchaseTable.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout = QVBoxLayout()
         layout.addWidget(self.company_selector)
