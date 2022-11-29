@@ -7,9 +7,10 @@ from PyQt6.QtWidgets import (
 from ... import settings
 from ...dependencies import get_odoo
 
-from ..model.odoomodel import OdooModel
+from ..model.odoomodel import CustomOdooModel, OdooModel
 from ..widget.odoocombobox import OdooComboBox
 from ..widget.odootableview import OdooTableView
+from ...controller.excel import FIELDS
 
 
 class MainWindow(QWidget):
@@ -36,22 +37,23 @@ class MainWindow(QWidget):
         self.company_selector.currentIndexChanged.connect(self.set_company)
         self.company_selector.setModel(company_model)
 
-        product_model = OdooModel(
+        product_model = CustomOdooModel(
             conn=conn,
-            name='product.template',
+            name='Excel load',
             domain=[[
                 ('sale_ok', '=', True),
                 ('purchase_ok', '=', True),
                 ('active', '=', True)
             ]],
             company_id=self.company_selector.currentData(),
-            fields=(
-                'barcode',
-                'default_code',
-                'name',
-                'categ_id',
-                'taxes_id',
-                'list_price'))
+            fields=FIELDS)
+        # fields=(
+        #     'barcode',
+        #     'default_code',
+        #     'name',
+        #     'categ_id',
+        #     'taxes_id',
+        #     'list_price'))
         self.changeCompany.connect(product_model.updateCompany)
         self.purchaseTable = OdooTableView(parent=self)
         self.purchaseTable.setModel(product_model)

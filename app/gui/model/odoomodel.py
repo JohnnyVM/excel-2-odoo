@@ -1,7 +1,6 @@
 import concurrent.futures
 from threading import Event
 from typing import Any
-from functools import partial
 from copy import deepcopy
 
 from PyQt6.QtCore import (
@@ -24,11 +23,13 @@ class OdooModel(QAbstractTableModel):
     _conn: odoorpc.ODOO
     domain: list = []
     _fields: dict
-    _data: list[dict]
+    _data: list[dict] = []
     _relational_model: dict[str, 'OdooModel'] = {}
     company_id: int | None = None
 
     def __company_related(self, model: str) -> bool:
+        if not model:
+            return False
         # Hackish
         # Fields as taxes_id can have multiple values per company
         # in the current implementation allow only one company
@@ -80,7 +81,7 @@ class OdooModel(QAbstractTableModel):
         """ Wrap for call event """
         if not event.is_set():
             attr = deepcopy(attributes)
-            if parent.company_id and (parent.__company_related(attributes['relation']) or attributes['company_dependent']):
+            if parent.company_id and (parent.__company_related(attributes.get('relation', None)) or attributes.get('company_dependent', False)):
                 if 'domain' not in attr:
                     attr['domain'] = []
                 attr['domain'].extend(['|', ('company_id', '=', parent.company_id), ('company_id', '=', False)])
@@ -88,7 +89,7 @@ class OdooModel(QAbstractTableModel):
             parent._relational_model[field] = OdooModel(
                 conn=parent._conn,
                 name=attr['relation'],
-                domain=attr['domain'],
+                domain=attr.get('domain', []),
                 fields=('id', 'display_name'))
             column = [f for f in parent._fields.keys()].index(field)
             nrows = parent.rowCount()
@@ -103,6 +104,7 @@ class OdooModel(QAbstractTableModel):
         with concurrent.futures.ThreadPoolExecutor() as exec:
             for field, attributes in self._fields.items():
                 if 'relation' in attributes:
+                    # OdooModel.__wrap_thread(event, self, field, attributes)
                     future = exec.submit(OdooModel.__wrap_thread, event, self, field, attributes)
                     futures.append(future)
                 done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -191,7 +193,7 @@ class OdooModel(QAbstractTableModel):
             event = Event()
             with concurrent.futures.ThreadPoolExecutor() as exec:
                 for field, attributes in self._fields.items():
-                    if 'relation' in attributes and self.company_id and (self.__company_related(attributes['relation']) or attributes['company_dependent']):
+                    if self.company_id and (self.__company_related(attributes.get('relation', None)) or attributes.get('company_dependent', False)):
                         future = exec.submit(OdooModel.__wrap_thread, event, self, field, attributes)
                         futures.append(future)
                     done, not_done = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_EXCEPTION)
@@ -201,3 +203,31 @@ class OdooModel(QAbstractTableModel):
                             for future in futures:
                                 future.cancel()
                             event.set()
+
+
+class CustomOdooModel(OdooModel):
+    """
+    Convenience function to overload __init__
+    """
+
+    def _load(self):
+        self._loadRelationalData()
+
+    def __init__(self, conn: odoorpc.ODOO, parent: QObject = None, fields: dict = {}, **kwargs):
+        """ """
+        QAbstractTableModel.__init__(self, parent)
+        self._name = "CustomOdooModel"
+        self._conn = conn
+
+        if 'name' in kwargs:
+            self._name = kwargs['name']
+
+        if 'domain' in kwargs:
+            self.domain = kwargs['domain']
+
+        if 'company_id' in kwargs:
+            self.company_id = kwargs['company_id']
+
+        self._fields = fields
+
+        self._load()
