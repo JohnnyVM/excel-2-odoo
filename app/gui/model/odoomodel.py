@@ -18,8 +18,10 @@ import odoorpc
 class OdooModel(QAbstractTableModel):
     """
     Load odoo Model data and relations
+    TODO:
+        - cache field_get operation
     """
-    _name: str
+    _name: str = None
     _conn: odoorpc.ODOO
     domain: list = []
     _fields: dict
@@ -33,14 +35,13 @@ class OdooModel(QAbstractTableModel):
         # Hackish
         # Fields as taxes_id can have multiple values per company
         # in the current implementation allow only one company
-        qInfo(f"{self.__class__.__name__}: {self._name} fields_get {{}}")
+        qInfo(f"{self.__class__.__name__}({self.name}): fields_get {{}}")
         fields = self._conn.execute_kw(model, 'fields_get', [], {})
         return 'company_id' in fields.keys()
 
     def __init__(self, conn: odoorpc.ODOO, name: str, parent: QObject = None, **kwargs):
         """ """
         QAbstractTableModel.__init__(self, parent)
-        self._name = name
         self._conn = conn
 
         if 'domain' in kwargs:
@@ -53,12 +54,15 @@ class OdooModel(QAbstractTableModel):
         if 'fields' in kwargs:
             fields = kwargs['fields']
 
-        qInfo(f"{self.__class__.__name__}: {self._name} fields_get {fields}")
-        self._fields = self._conn.execute_kw(
-            self._name,
-            'fields_get',
-            [fields])
-        self._load()
+        if 'name' in kwargs:
+            self.name = kwargs['name']
+            qInfo(f"{self.__class__.__name__}({self.name}): {self.name} fields_get {fields}")
+            self._fields = self._conn.execute_kw(
+                self.name,
+                'fields_get',
+                [fields])
+            self._loadRelationalData()
+            self._load()
 
     def _loadRelationalField(self, field: str, **value) -> dict:
         search_fields = ('id', 'display_name')
@@ -66,14 +70,14 @@ class OdooModel(QAbstractTableModel):
         if 'domain' in value:
             domain = value['domain']
 
-        qInfo(f"{self.__class__.__name__}: Relation {value['relation']} search_read {value['domain']} {search_fields}")
+        qInfo(f"{self.name}: Relation {value['relation']} search_read {value['domain']} {search_fields}")
         relational_model = self._conn.execute_kw(
             value['relation'],
             "search_read",
             domain,
             {'fields': search_fields})
         n_records = len(relational_model)
-        qDebug(f"{self.__class__.__name__}: Fetched {n_records} records from relation {value['relation']}")
+        qDebug(f"{self.name}: Fetched {n_records} records from relation {value['relation']}")
         return relational_model
 
     @staticmethod
@@ -117,14 +121,14 @@ class OdooModel(QAbstractTableModel):
 
     def _load(self):
         search_fields = tuple(field for field in self._fields.keys())
-        qInfo(f"{self.__class__.__name__}: {self._name} search_read {self.domain} {search_fields}")
+        qInfo(f"{self.__class__.__name__}({self.name}): search_read {self.domain} {search_fields}")
         self._data = self._conn.execute_kw(
-            self._name,
+            self.name,
             "search_read",
             self.domain,
             {'fields': search_fields})
         n_records = len(self._data)
-        qDebug(f"{self.__class__.__name__}: Fetched {n_records} records from {self._name}")
+        qDebug(f"{self.__class__.__name__}({self.name}): Fetched {n_records} records")
         self._loadRelationalData()
         self.dataChanged.emit(
             self.index(0, 0),
@@ -187,7 +191,7 @@ class OdooModel(QAbstractTableModel):
 
     def updateCompany(self, newcompany_id: int):
         if newcompany_id != self.company_id:
-            qDebug(f"{self.__class__.__name__}: Change company {self.company_id} -> {newcompany_id}")
+            qDebug(f"{self.name}: Change company {self.company_id} -> {newcompany_id}")
             self.company_id = newcompany_id
             futures = []
             event = Event()
@@ -203,31 +207,3 @@ class OdooModel(QAbstractTableModel):
                             for future in futures:
                                 future.cancel()
                             event.set()
-
-
-class CustomOdooModel(OdooModel):
-    """
-    Convenience function to overload __init__
-    """
-
-    def _load(self):
-        self._loadRelationalData()
-
-    def __init__(self, conn: odoorpc.ODOO, parent: QObject = None, fields: dict = {}, **kwargs):
-        """ """
-        QAbstractTableModel.__init__(self, parent)
-        self._name = "CustomOdooModel"
-        self._conn = conn
-
-        if 'name' in kwargs:
-            self._name = kwargs['name']
-
-        if 'domain' in kwargs:
-            self.domain = kwargs['domain']
-
-        if 'company_id' in kwargs:
-            self.company_id = kwargs['company_id']
-
-        self._fields = fields
-
-        self._load()
