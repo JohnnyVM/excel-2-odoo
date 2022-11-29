@@ -38,7 +38,7 @@ class MainWindow(QWidget):
         self.company_selector.currentIndexChanged.connect(self.set_company)
         self.company_selector.setModel(company_model)
 
-        product_model = ExcelOdooModel(
+        product_model = OdooModel(
             conn=conn,
             name='Excel load',
             company_id=self.company_selector.currentData(),

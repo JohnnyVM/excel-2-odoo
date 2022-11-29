@@ -30,5 +30,13 @@ FIELDS = {
 }
 
 
-class Excel():
-    pass
+def factoryExcelOdooModel(excel_file: str):
+    wb = openpyxl.load_workbook(
+        filename=excel_file, read_only=True, data_only=True)
+    sheet = wb[wb.sheetnames[0]]  # only the first
+
+    iter_rows = sheet.iter_rows()
+    next(iter_rows)  # discard header
+    for row in iter_rows:
+        pass
+    wb.close()

@@ -39,7 +39,7 @@ class OdooModel(QAbstractTableModel):
         fields = self._conn.execute_kw(model, 'fields_get', [], {})
         return 'company_id' in fields.keys()
 
-    def __init__(self, conn: odoorpc.ODOO, name: str, parent: QObject = None, **kwargs):
+    def __init__(self, conn: odoorpc.ODOO, parent: QObject = None, autoload: bool = True, **kwargs):
         """ """
         QAbstractTableModel.__init__(self, parent)
         self._conn = conn
@@ -56,6 +56,8 @@ class OdooModel(QAbstractTableModel):
 
         if 'name' in kwargs:
             self.name = kwargs['name']
+
+        if autoload:
             qInfo(f"{self.__class__.__name__}({self.name}): {self.name} fields_get {fields}")
             self._fields = self._conn.execute_kw(
                 self.name,
@@ -180,15 +182,47 @@ class OdooModel(QAbstractTableModel):
 
         return super().headerData(section, orientation, role)
 
+    def setHeaderData(self, section: int, orientation: Qt.Orientation, value: QVariant, role: int = ...) -> Any:
+        if orientation == Qt.Orientation.Horizontal:
+            if section > self.columnCount():
+                raise IndexError()
+
+            if role == Qt.ItemDataRole.DisplayRole:
+                tuple(field for field in self._fields.values())[section]\
+                    .update({'string': value})
+
+            if role == Qt.ItemDataRole.ToolTipRole:
+                tuple(field for field in self._fields.values())[section]\
+                    .update({'help': value})
+
+            if role == Qt.ItemDataRole.UserRole:
+                tuple(field for field in self._fields.values())\
+                    .update({section: value})
+
+            if role != Qt.ItemDataRole.UserRole\
+                    and role != Qt.ItemDataRole.ToolTipRole\
+                    and role != Qt.ItemDataRole.DisplayRole:
+                raise ValueError(f"Invalid role Qt.ItemDataRole.{role}")
+
+            self.headerDataChanged(orientation, section, section)
+            return True
+
+        if orientation == Qt.Orientation.Vertical:
+            if section > self.rowCount():
+                raise IndexError()
+
+        return super().setHeaderData(section, orientation, role)
+
+    def addField(self, name: str, attributes: dict[str, str]) -> bool:
+        count = self.columnCount()
+        self.beginInsertColumns(None, count, count)
+        self._fields[name] = attributes
+        self.endInsertColumn()
+        return True
+
     def fieldNameColumn(self, name: str) -> int:
         """ Helper to return the column index by name """
-        idx = -1
-        try:
-            idx = tuple(self._fields.keys()).index(name)
-        except ValueError:
-            pass
-
-        return idx
+        return tuple(self._fields.keys()).index(name)
 
     def flags(self, index: QModelIndex):
         return Qt.ItemFlag.ItemIsEditable\
