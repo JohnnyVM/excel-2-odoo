@@ -7,7 +7,8 @@ from PyQt6.QtWidgets import (
 from ... import settings
 from ...dependencies import get_odoo
 
-from ..model.odoomodel import CustomOdooModel, OdooModel
+from ..model.odoomodel import OdooModel
+from ..model.excelodoomodel import ExcelOdooModel
 from ..widget.odoocombobox import OdooComboBox
 from ..widget.odootableview import OdooTableView
 from ...controller.excel import FIELDS
@@ -37,14 +38,9 @@ class MainWindow(QWidget):
         self.company_selector.currentIndexChanged.connect(self.set_company)
         self.company_selector.setModel(company_model)
 
-        product_model = CustomOdooModel(
+        product_model = ExcelOdooModel(
             conn=conn,
             name='Excel load',
-            domain=[[
-                ('sale_ok', '=', True),
-                ('purchase_ok', '=', True),
-                ('active', '=', True)
-            ]],
             company_id=self.company_selector.currentData(),
             fields=FIELDS)
         # fields=(

@@ -24,7 +24,7 @@ class OdooModel(QAbstractTableModel):
     _name: str = None
     _conn: odoorpc.ODOO
     domain: list = []
-    _fields: dict
+    _fields: dict = {}
     _data: list[dict] = []
     _relational_model: dict[str, 'OdooModel'] = {}
     company_id: int | None = None
@@ -182,7 +182,13 @@ class OdooModel(QAbstractTableModel):
 
     def fieldNameColumn(self, name: str) -> int:
         """ Helper to return the column index by name """
-        return tuple(self._fields.keys()).index(name)
+        idx = -1
+        try:
+            idx = tuple(self._fields.keys()).index(name)
+        except ValueError:
+            pass
+
+        return idx
 
     def flags(self, index: QModelIndex):
         return Qt.ItemFlag.ItemIsEditable\
