@@ -56,6 +56,24 @@ class TestOdooModel(unittest.TestCase):
         model.removeColumns(0, model.columnCount())  # remove latest
         self.assertEqual(0, model.columnCount())
 
+    def test_rowCount(self):
+        model = odoomodel.OdooModel(
+            conn=None,
+            name='test_removeColumns',
+            autoload=False)
+        model._data = [1, 2, 3]
+        self.assertEqual(model.rowCount(), 3)
+
+    def test_insertRows(self):
+        model = odoomodel.OdooModel(
+            conn=None,
+            name='test_removeColumns',
+            autoload=False)
+        model._fields = deepcopy(FIELDS)
+        model.insertRows(0, 3)
+        self.assertEqual(model.rowCount(), 3)
+        self.assertEqual(len(model._data[0]), len(FIELDS))
+
 
 if __name__ == '__main__':
     unittest.main()

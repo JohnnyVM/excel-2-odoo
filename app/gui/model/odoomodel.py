@@ -2,6 +2,7 @@ import concurrent.futures
 from threading import Event
 from typing import Any
 from copy import deepcopy
+from itertools import repeat
 
 from PyQt6.QtCore import (
     QAbstractTableModel,
@@ -151,6 +152,14 @@ class OdooModel(QAbstractTableModel):
     def rowCount(self, index: QModelIndex = ...) -> int:
         return len(self._data)
 
+    def insertRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()):
+        res = dict(zip(self._fields.keys(), repeat(None)))
+        self.beginInsertRows(parent, row, row + count - 1)
+        for _ in repeat(None, count):
+            self._data.insert(row, deepcopy(res))
+        self.endInsertRows()
+        return True
+
     def data(self, index: QModelIndex, role: int = ...) -> Any:
         if not index.isValid():
             return QVariant()
@@ -176,7 +185,8 @@ class OdooModel(QAbstractTableModel):
                 raise IndexError()
 
             if role == Qt.ItemDataRole.DisplayRole:
-                return tuple(field for field in self._fields.values())[section]['string']
+                name = tuple(field for field in self._fields.values())[section]
+                return tuple(field for field in self._fields.values())[section].get('string', name)
 
             if role == Qt.ItemDataRole.ToolTipRole:
                 return tuple(field for field in self._fields.values())[section].get('help', '')

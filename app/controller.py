@@ -49,8 +49,12 @@ def factoryExcelOdooModel(excel_file: str, parent):
         autoload=False)
     headers = next(iter_rows)  # discard header
     for idx, header in enumerate(headers):
-        model.setHeaderData(idx, Qt.Orientation.Horizontal)
-    for row in iter_rows:
-        pass
+        if header.value:
+            value = {'string': header}
+            model._fields.update({header: value})
+    for column, row_value in enumerate(iter_rows):
+
+        
+        
     wb.close()
     return model
