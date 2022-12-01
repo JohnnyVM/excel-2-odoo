@@ -14,13 +14,14 @@ from ...dependencies import get_odoo
 from ..model.odoomodel import OdooModel
 from ..widget.odoocombobox import OdooComboBox
 from ..widget.odootableview import OdooTableView
-from ...controller import FIELDS, factoryExcelOdooModel
+from ...controller import factoryExcelOdooModel
 
 
 class MainWindow(QWidget):
     _company_id: int | None = None
     changeCompany = pyqtSignal(int)
     loadExcel = pyqtSignal(str)
+    __update_company_connection = None
 
     def mainButtonsBehaviour(self, button):
         # TODO search other way different to check the text
@@ -33,7 +34,10 @@ class MainWindow(QWidget):
                 'Select Excel file',
                 os.getcwd(),
                 "Excel files (*.xlsx *.xlsm)")
-            model = factoryExcelOdooModel(excelfile)
+            model = factoryExcelOdooModel(excelfile, self)
+            if self.__update_company_connection:
+                self.changeCompany.disconnect(self.__update_company_connection)
+            self.__update_company_connection = self.changeCompany.connect(model.updateCompany)
             self.purchaseTable.setModel(model)
             return
 
@@ -63,15 +67,7 @@ class MainWindow(QWidget):
             QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Open)
         self.mainButtons.clicked.connect(self.mainButtonsBehaviour)
 
-        product_model = OdooModel(
-            conn=conn,
-            name='Excel load',
-            company_id=self.company_selector.currentData(),
-            autoload=False,
-            fields=FIELDS)
-        self.changeCompany.connect(product_model.updateCompany)
         self.purchaseTable = OdooTableView(parent=self)
-        self.purchaseTable.setModel(product_model)
         self.purchaseTable.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
         layout = QVBoxLayout()

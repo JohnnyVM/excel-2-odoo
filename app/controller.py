@@ -1,5 +1,7 @@
 import openpyxl
 
+from . import settings
+from .dependencies import get_odoo
 from .gui.model.odoomodel import OdooModel
 
 FIELDS = {
@@ -41,16 +43,17 @@ def factoryExcelOdooModel(excel_file: str, parent):
 
     iter_rows = sheet.iter_rows()
     model = OdooModel(
-        conn=parent._conn,
+        conn=get_odoo(settings.conf),
         name='Excel load',
-        company_id=parent.company_id,
+        company_id=parent._company_id,
         autoload=False)
     headers = next(iter_rows)  # discard header
     for idx, header in enumerate(headers):
-        if header.value:
-            value = {'string': header}
-            model._fields.update({header: value})
-    for row in enumerate(iter_rows):
+        val = header.value
+        if val:
+            value = {'string': val}
+            model._fields.update({val: value})
+    for row in iter_rows:
         model._data.append(dict(zip(model._fields.keys(), map(lambda r: r.value, row))))
 
     wb.close()
