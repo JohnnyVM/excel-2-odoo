@@ -13,7 +13,8 @@ class OdooTableView(QTableView):
     def setModel(self, model: OdooModel):
         super().setModel(model)
         for column in range(model.columnCount()):
-            attributes = model.headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole)
+            field = model.headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole)
+            attributes = tuple(field.values())[0]
             if 'relation' in attributes and attributes['type'] == 'many2one':
                 self.setItemDelegateForColumn(column, OdooMany2OneDelegate(parent=self))
             if 'relation' in attributes and attributes['type'] == 'many2many':

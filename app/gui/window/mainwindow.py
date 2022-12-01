@@ -3,7 +3,6 @@ import os
 from PyQt6.QtCore import qDebug, pyqtSignal
 from PyQt6.QtWidgets import (
     QWidget,
-    QHeaderView,
     QFileDialog,
     QDialogButtonBox,
     QVBoxLayout)
@@ -65,10 +64,10 @@ class MainWindow(QWidget):
 
         self.mainButtons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Open)
-        self.mainButtons.clicked.connect(self.mainButtonsBehaviour)
 
         self.purchaseTable = OdooTableView(parent=self)
-        self.purchaseTable.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.purchaseTable.horizontalHeader().setStretchLastSection(True)
+        self.mainButtons.clicked.connect(self.mainButtonsBehaviour)
 
         layout = QVBoxLayout()
         layout.addWidget(self.company_selector)

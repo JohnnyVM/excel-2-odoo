@@ -192,7 +192,8 @@ class OdooModel(QAbstractTableModel):
                 return tuple(field for field in self._fields.values())[section].get('help', '')
 
             if role == Qt.ItemDataRole.UserRole:
-                return tuple(field for field in self._fields.values())[section]
+                name = tuple(field for field in self._fields.keys())[section]
+                return {name: self._fields[name]}
 
         if orientation == Qt.Orientation.Vertical:
             if section > self.rowCount():
@@ -214,13 +215,8 @@ class OdooModel(QAbstractTableModel):
                     .update({'help': value})
 
             if role == Qt.ItemDataRole.UserRole:
-                tuple(field for field in self._fields.values())\
-                    .update({section: value})
-
-            if role != Qt.ItemDataRole.UserRole\
-                    and role != Qt.ItemDataRole.ToolTipRole\
-                    and role != Qt.ItemDataRole.DisplayRole:
-                raise ValueError(f"Invalid role Qt.ItemDataRole.{role}")
+                name = tuple(field for field in self._fields.keys())[section]
+                self._fields.update({name: value})
 
             self.headerDataChanged(orientation, section, section)
             return True

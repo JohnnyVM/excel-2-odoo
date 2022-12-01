@@ -1,39 +1,26 @@
+from PyQt6.QtCore import Qt
 import openpyxl
 
 from . import settings
 from .dependencies import get_odoo
 from .gui.model.odoomodel import OdooModel
 
-FIELDS = {
-    'barcode': {
-        'string': 'Código de Barras',  # Display name
-        'help': 'Código de barras',  # tooltip
-        'type': 'string',  # many2one | many2many  require relation
-    },
-    'default_code': {
-        'string': 'Código interno',
-        'help': 'Código interno',
-        'type': 'string',
-    },
-    'list_price': {
-        'string': 'Precio de venta',
-        'help': 'Precio de venta',
-        'type': 'float',
-    },
-    'categ_id': {
-        'string': 'Categoría de producto',
-        'help': 'Categoría de producto',
-        'type': 'many2one',
-        'relation': 'product.category',
-    },
-    'taxes_id': {
-        'string': 'Impuestos cliente',
-        'help': 'Impuestos cliente',
-        'type': 'many2many',
-        'relation': 'account.tax',
-        'domain': (("type_tax_use", "=", "sale"),)
-    },
-}
+
+MANDATORY_FIELDS = ['barcode', 'name', 'taxes_id', 'supplier_taxes_id', 'list_price']
+
+
+def text2many2manyfield(text, model: OdooModel):
+    for data in model._data:
+        if str(text) in data['display_name']:
+            return [data['id']]
+    return None
+
+
+def text2many2onefield(text, model: OdooModel):
+    for data in model._data:
+        if str(text) == data['display_name']:
+            return [data['id'], text]
+    return None
 
 
 def factoryExcelOdooModel(excel_file: str, parent):
@@ -47,14 +34,36 @@ def factoryExcelOdooModel(excel_file: str, parent):
         name='Excel load',
         company_id=parent._company_id,
         autoload=False)
-    headers = next(iter_rows)  # discard header
-    for idx, header in enumerate(headers):
-        val = header.value
-        if val:
-            value = {'string': val}
-            model._fields.update({val: value})
+    fields = tuple(map(lambda c: c.value, next(iter_rows)))
+    raw_fields = model._conn.execute_kw(
+        'product.template',
+        'fields_get',
+        [fields])
+    for mfield in MANDATORY_FIELDS:
+        if mfield not in fields:
+            raise ValueError(f"missing field {mfield}")
+
+    # ensure the order
+    for field in fields:
+        if field in raw_fields:
+            model._fields[field] = raw_fields[field]
+        else:
+            model._fields[field] = {'string': field}
     for row in iter_rows:
         model._data.append(dict(zip(model._fields.keys(), map(lambda r: r.value, row))))
+    model._loadRelationalData()
+
+    # Here is necesary transform the raw data from exel to odoo
+    for column in range(model.columnCount()):
+        field, attributes = tuple(model.headerData(
+            column, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole).items())[0]
+        for row in range(model.rowCount()):
+            if attributes.get('type', None) == 'many2many':
+                model._data[row][field] = text2many2manyfield(
+                    model._data[row][field], model._relational_model[field])
+            if attributes.get('type', None) == 'many2one':
+                model._data[row][field] = text2many2manyfield(
+                    model._data[row][field], model._relational_model[field])
 
     wb.close()
     return model

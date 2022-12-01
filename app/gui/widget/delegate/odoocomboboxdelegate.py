@@ -55,6 +55,9 @@ class OdooMany2ManyDelegate(QStyledItemDelegate):
 
     def setEditorData(self, editor: QWidget, index: QModelIndex):
         data = index.model().data(index, Qt.ItemDataRole.EditRole)
+        if data is None:
+            editor.setCurrentIndex(-1)
+            return
         index = editor.findData(data[0])
         editor.setCurrentIndex(index)
 
@@ -67,10 +70,11 @@ class OdooMany2ManyDelegate(QStyledItemDelegate):
         field_name = [f for f in model._fields.keys()][index.column()]
         rel_model = model._relational_model[field_name]
         texts = []
-        for ids in index.data():
-            for rel_row in rel_model._data:
-                if ids == rel_row['id']:
-                    texts.append(tuple(rel_row.values())[1])
+        if index.data():
+            for ids in index.data():
+                for rel_row in rel_model._data:
+                    if ids == rel_row['id']:
+                        texts.append(tuple(rel_row.values())[1])
 
         super().paint(painter, option, index)
         painter.drawText(option.rect, Qt.AlignmentFlag.AlignCenter, ', '.join(texts))
