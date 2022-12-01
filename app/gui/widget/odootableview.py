@@ -11,6 +11,9 @@ class OdooTableView(QTableView):
         QTableView.__init__(self, parent)
 
     def setModel(self, model: OdooModel):
+        old_model = self.model()
+        if old_model:
+            old_model.removeRows(0, old_model.rowCount())
         super().setModel(model)
         for column in range(model.columnCount()):
             field = model.headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole)

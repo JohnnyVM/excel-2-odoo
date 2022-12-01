@@ -1,9 +1,9 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, qInfo
 import openpyxl
 
-from . import settings
-from .dependencies import get_odoo
-from .gui.model.odoomodel import OdooModel
+from .. import settings
+from ..dependencies import get_odoo
+from ..gui.model.odoomodel import OdooModel
 
 
 MANDATORY_FIELDS = ['barcode', 'name', 'taxes_id', 'supplier_taxes_id', 'list_price']
@@ -41,7 +41,8 @@ def factoryExcelOdooModel(excel_file: str, parent):
         [fields])
     for mfield in MANDATORY_FIELDS:
         if mfield not in fields:
-            raise ValueError(f"missing field {mfield}")
+            qInfo(f"missing field {mfield}")
+            return
 
     # ensure the order
     for field in fields:

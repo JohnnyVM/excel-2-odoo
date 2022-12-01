@@ -13,7 +13,11 @@ from ...dependencies import get_odoo
 from ..model.odoomodel import OdooModel
 from ..widget.odoocombobox import OdooComboBox
 from ..widget.odootableview import OdooTableView
-from ...controller import factoryExcelOdooModel
+from ...controller.factorymodel import factoryExcelOdooModel
+from ...controller.model2odoo import (
+    valid_model,
+    create_products_from_model,
+    update_products_from_model)
 
 
 class MainWindow(QWidget):
@@ -25,7 +29,14 @@ class MainWindow(QWidget):
     def mainButtonsBehaviour(self, button):
         # TODO search other way different to check the text
         if button.text() == "Apply":
-            raise NotImplementedError()
+            model = self.purchaseTable.model()
+            if not model:
+                return
+            if not valid_model(model):
+                return
+            create_products_from_model(model)
+            update_products_from_model(model)
+            return
 
         if button.text() == "Open":
             excelfile, _ = QFileDialog.getOpenFileName(
@@ -34,6 +45,8 @@ class MainWindow(QWidget):
                 os.getcwd(),
                 "Excel files (*.xlsx *.xlsm)")
             model = factoryExcelOdooModel(excelfile, self)
+            if not model:
+                return
             if self.__update_company_connection:
                 self.changeCompany.disconnect(self.__update_company_connection)
             self.__update_company_connection = self.changeCompany.connect(model.updateCompany)
