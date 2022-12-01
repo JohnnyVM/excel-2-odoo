@@ -1,5 +1,3 @@
-from PyQt6.QtCode import Qt
-
 import openpyxl
 
 from .gui.model.odoomodel import OdooModel
@@ -52,9 +50,8 @@ def factoryExcelOdooModel(excel_file: str, parent):
         if header.value:
             value = {'string': header}
             model._fields.update({header: value})
-    for column, row_value in enumerate(iter_rows):
+    for row in enumerate(iter_rows):
+        model._data.append(dict(zip(model._fields.keys(), map(lambda r: r.value, row))))
 
-        
-        
     wb.close()
     return model
