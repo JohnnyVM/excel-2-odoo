@@ -58,7 +58,7 @@ class OdooModel(QAbstractTableModel):
             self.name = kwargs['name']
 
         if autoload:
-            qInfo(f"{self.__class__.__name__}({self.name}): {self.name} fields_get {fields}")
+            qInfo(f"{self.__class__.__name__}({self.name}): fields_get {fields}".encode('utf-8'))
             self._fields = self._conn.execute_kw(
                 self.name,
                 'fields_get',
@@ -139,6 +139,14 @@ class OdooModel(QAbstractTableModel):
 
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self._fields)
+
+    def removeColumns(self, column: int, count: int, parent: QModelIndex = QModelIndex()):
+        keys = tuple(self._fields.keys())[column: column + count]
+        self.beginRemoveColumns(parent, column, column + count - 1)
+        for key in keys:
+            del self._fields[key]
+        self.endRemoveColumns()
+        return True
 
     def rowCount(self, index: QModelIndex = ...) -> int:
         return len(self._data)
