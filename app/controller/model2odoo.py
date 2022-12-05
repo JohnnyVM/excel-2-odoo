@@ -10,7 +10,7 @@ MANDATORY_FIELDS = ['barcode', 'name', 'taxes_id', 'supplier_taxes_id', 'list_pr
 
 DEFAULT_PRODUCT_VALUES = {
     'type': 'product',
-    'available_in_pos': False,
+    'available_in_pos': True,
 }
 
 
@@ -100,10 +100,6 @@ def update_products_from_model(model: OdooModel):
         'product.template',
         'fields_get',
         [], {'attributes': ['name']})
-    for product in data:
-        for key in tuple(product.keys()):
-            if key not in product_fields.keys():
-                del product[key]
 
     # Fields many2one must be edited
     for field, attributes in model._fields.items():
@@ -115,13 +111,14 @@ def update_products_from_model(model: OdooModel):
     # ids asigned
     update_products = []
     for product in data:
+        for key in tuple(product.keys()):
+            if key not in product_fields.keys():
+                del product[key]
         ids = None
         for odoo_product in odoo_products:
             if odoo_product['barcode'] == product['barcode']:
                 ids = odoo_product['id']
                 break
-        if not ids:
-            RuntimeError("Logical error")
         update_products.append([[ids], {'list_price': product['list_price']}])
 
     def __update_product(model, product):
