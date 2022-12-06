@@ -12,7 +12,7 @@ from ...dependencies import get_odoo
 
 from ..model.odoomodel import OdooModel
 from ..widget.odoocombobox import OdooComboBox
-from ..widget.purchasewidget import PurchaseWidget
+from ..widget.purchasewidget import OdooFormWidget
 from ..widget.odootableview import OdooTableView
 from ...controller.factorymodel import factoryExcelOdooModel
 from ...controller.model2odoo import (
@@ -78,7 +78,7 @@ class MainWindow(QWidget):
         self.company_selector.currentIndexChanged.connect(self.set_company)
         self.company_selector.setModel(company_model)
 
-        self.supplier_form = PurchaseWidget(parent=self)
+        self.supplier_form = OdooFormWidget(parent=self)
         self.changeCompany.connect(self.supplier_form.changeCompany)
 
         self.mainButtons = QDialogButtonBox(

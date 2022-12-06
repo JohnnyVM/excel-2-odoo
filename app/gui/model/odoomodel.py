@@ -22,7 +22,7 @@ class OdooModel(QAbstractTableModel):
     TODO:
         - cache field_get operation
     """
-    _name: str = None
+    name: str = None
     _conn: odoorpc.ODOO
     domain: list = []
     _fields: dict = {}
@@ -244,6 +244,7 @@ class OdooModel(QAbstractTableModel):
             | Qt.ItemFlag.ItemIsSelectable
 
     def updateCompany(self, newcompany_id: int):
+        """ TODO: the own records should be updated if company change """
         if newcompany_id != self.company_id:
             qDebug(f"{self.name}: Change company {self.company_id} -> {newcompany_id}")
             self.company_id = newcompany_id
