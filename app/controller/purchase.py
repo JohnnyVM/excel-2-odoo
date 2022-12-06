@@ -39,7 +39,7 @@ def create_purchase_order(conn, header: OdooModel, lines: OdooModel):
             'product_qty': row['product_qty'],
             'price_unit': row['price_unit'],
             'name': row['display_name'],
-            #'taxes_id': row['supplier_taxes_id'],
+            'taxes_id': row['supplier_taxes_id'],
             'product_uom': row['product_uom'],
             'date_planned': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
