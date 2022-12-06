@@ -12,6 +12,7 @@ from ...dependencies import get_odoo
 
 from ..model.odoomodel import OdooModel
 from ..widget.odoocombobox import OdooComboBox
+from ..widget.purchasewidget import PurchaseWidget
 from ..widget.odootableview import OdooTableView
 from ...controller.factorymodel import factoryExcelOdooModel
 from ...controller.model2odoo import (
@@ -21,7 +22,7 @@ from ...controller.model2odoo import (
 
 
 class MainWindow(QWidget):
-    _company_id: int | None = None
+    company_id: int | None = None
     changeCompany = pyqtSignal(int)
     loadExcel = pyqtSignal(str)
     __update_company_connection = None
@@ -44,6 +45,8 @@ class MainWindow(QWidget):
                 'Select Excel file',
                 os.getcwd(),
                 "Excel files (*.xlsx *.xlsm)")
+            if not excelfile:
+                return
             model = factoryExcelOdooModel(excelfile, self)
             if not model:
                 return
@@ -57,9 +60,9 @@ class MainWindow(QWidget):
 
     def set_company(self, index: int) -> None:
         company_id = self.company_selector.itemData(index)
-        if company_id != self._company_id:
-            qDebug(f"{self.__class__.__name__}: Change company {self._company_id} -> {company_id}")
-            self._company_id = company_id
+        if company_id != self.company_id:
+            qDebug(f"{self.__class__.__name__}: Change company {self.company_id} -> {company_id}")
+            self.company_id = company_id
             self.changeCompany.emit(company_id)
 
     def __init__(self, parent: QWidget = None):
@@ -75,6 +78,9 @@ class MainWindow(QWidget):
         self.company_selector.currentIndexChanged.connect(self.set_company)
         self.company_selector.setModel(company_model)
 
+        self.supplier_form = PurchaseWidget(parent=self)
+        self.changeCompany.connect(self.supplier_form.changeCompany)
+
         self.mainButtons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Open)
 
@@ -84,6 +90,7 @@ class MainWindow(QWidget):
 
         layout = QVBoxLayout()
         layout.addWidget(self.company_selector)
+        layout.addWidget(self.supplier_form)
         layout.addWidget(self.purchaseTable)
         layout.addWidget(self.mainButtons)
 

@@ -32,7 +32,7 @@ def factoryExcelOdooModel(excel_file: str, parent):
     model = OdooModel(
         conn=get_odoo(settings.conf),
         name='Excel load',
-        company_id=parent._company_id,
+        company_id=parent.company_id,
         autoload=False)
     fields = tuple(map(lambda c: c.value, next(iter_rows)))
     raw_fields = model._conn.execute_kw(
