@@ -12,8 +12,9 @@ from ...dependencies import get_odoo
 
 from ..model.odoomodel import OdooModel
 from ..widget.odoocombobox import OdooComboBox
-from ..widget.purchasewidget import OdooFormWidget
 from ..widget.odootableview import OdooTableView
+from ..widget.odooformwidget import OdooFormWidget
+from ...controller.purchase import create_purchase_order
 from ...controller.factorymodel import factoryExcelOdooModel
 from ...controller.model2odoo import (
     valid_model,
@@ -37,6 +38,7 @@ class MainWindow(QWidget):
                 return
             create_products_from_model(model)
             update_products_from_model(model)
+            create_purchase_order(model._conn, self.supplier_form.model(), model)
             return
 
         if button.text() == "Open":

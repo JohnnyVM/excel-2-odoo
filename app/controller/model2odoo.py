@@ -48,10 +48,6 @@ def create_products_from_model(model: OdooModel):
         'product.template',
         'fields_get',
         [], {'attributes': ['name']})
-    for product in data:
-        for key in tuple(product.keys()):
-            if key not in product_fields.keys():
-                del product[key]
 
     # Fields many2one must be edited
     for field, attributes in model._fields.items():
@@ -61,6 +57,9 @@ def create_products_from_model(model: OdooModel):
                     p[field] = p[field][0]
 
     for product in data:
+        for key in tuple(product.keys()):
+            if key not in product_fields.keys():
+                del product[key]
         for key, value in DEFAULT_PRODUCT_VALUES.items():
             if key not in product.keys():
                 product.update({key: value})

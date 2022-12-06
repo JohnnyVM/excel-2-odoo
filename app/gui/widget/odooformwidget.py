@@ -25,7 +25,15 @@ class OdooFormWidget(QWidget):
         supplier_model = OdooModel(
             conn=conn,
             name='res.partner',
-            domain=(('|', ('company_id', '=', False), ('company_id', '=', parent.company_id)),),
+            domain=(
+                [
+                    ('vat', '!=', False),
+                    ('company_type', '=', 'company'),
+                    '|',
+                    ('company_id', '=', False),
+                    ('company_id', '=', parent.company_id)
+                ],
+            ),
             fields=('id', 'display_name'))
         self.changeCompany.connect(supplier_model.updateCompany)
         self.supplier_selector.setModel(supplier_model)
@@ -41,10 +49,11 @@ class OdooFormWidget(QWidget):
     def model(self):
         # return self.__model
         return {
-            '_data': {
+            '_data': [{
                 'partner_id': self.supplier_selector.currentData(),
-                'partner_ref': self.reference.text()
-            }
+                'partner_ref': self.reference.text(),
+                'state': 'draft'
+            }]
         }
 
     def setModel(self, model: OdooModel):

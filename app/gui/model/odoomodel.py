@@ -24,7 +24,7 @@ class OdooModel(QAbstractTableModel):
     """
     name: str = None
     _conn: odoorpc.ODOO
-    domain: list = []
+    domain: list = [[]]
     _fields: dict = {}
     _data: list[dict] = []
     _relational_model: dict[str, 'OdooModel'] = {}
@@ -122,13 +122,16 @@ class OdooModel(QAbstractTableModel):
                             future.cancel()
                         event.set()
 
-    def _load(self):
+    def _load(self, domain=None):
         search_fields = tuple(field for field in self._fields.keys())
         qInfo(f"{self.__class__.__name__}({self.name}): search_read {self.domain} {search_fields}")
+        new_domain = list(deepcopy(self.domain))
+        if domain:
+            new_domain[0].extend(domain[0])
         self._data = self._conn.execute_kw(
             self.name,
             "search_read",
-            self.domain,
+            new_domain,
             {'fields': search_fields})
         n_records = len(self._data)
         qDebug(f"{self.__class__.__name__}({self.name}): Fetched {n_records} records")
@@ -246,6 +249,13 @@ class OdooModel(QAbstractTableModel):
     def updateCompany(self, newcompany_id: int):
         """ TODO: the own records should be updated if company change """
         if newcompany_id != self.company_id:
+            if self.name:
+                model_fields = self._conn.execute_kw(
+                    self.name,
+                    'fields_get',
+                    [], {'attributes': ['string']})
+                if 'company_id' in model_fields.keys():
+                    self._load(domain=[['|', ('company_id', '=', newcompany_id), ('company_id', '=', False)]])
             qDebug(f"{self.name}: Change company {self.company_id} -> {newcompany_id}")
             self.company_id = newcompany_id
             futures = []

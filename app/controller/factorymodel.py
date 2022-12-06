@@ -31,7 +31,6 @@ def factoryExcelOdooModel(excel_file: str, parent):
     iter_rows = sheet.iter_rows()
     model = OdooModel(
         conn=get_odoo(settings.conf),
-        name='Excel load',
         company_id=parent.company_id,
         autoload=False)
     fields = tuple(map(lambda c: c.value, next(iter_rows)))
