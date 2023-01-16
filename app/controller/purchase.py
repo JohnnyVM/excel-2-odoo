@@ -56,7 +56,7 @@ def create_purchase_order(conn, header: OdooModel, lines: OdooModel):
                 lines.append(create_line(row))
 
     def create_order_line(product):
-        qInfo(f"create order line for product {product}")
+        qInfo(f"create order line for product {product}".encode('utf-8'))
         conn.execute_kw('purchase.order.line', 'create', [product])
 
     with concurrent.futures.ThreadPoolExecutor() as exec:

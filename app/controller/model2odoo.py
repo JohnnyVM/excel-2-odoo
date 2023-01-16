@@ -122,7 +122,7 @@ def update_products_from_model(model: OdooModel):
 
     def __update_product(model, product):
         model._conn.execute_kw('product.template', 'write', product)
-        qInfo(f"Update product {product[0][0]}. Price: {product[1]['list_price']}")
+        qInfo(f"Update product {product[0][0]}. Price: {product[1]['list_price']}".encode('utf-8'))
 
     with concurrent.futures.ThreadPoolExecutor() as exec:
         for product in update_products:
