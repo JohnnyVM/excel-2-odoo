@@ -59,7 +59,7 @@ class OdooModel(QAbstractTableModel):
             self.name = kwargs['name']
 
         if autoload:
-            qInfo(f"{self.__class__.__name__}({self.name}): fields_get {fields}".encode('utf-8'))
+            qInfo(str(f"{self.__class__.__name__}({self.name}): fields_get {fields}".encode('utf-8')))
             self._fields = self._conn.execute_kw(
                 self.name,
                 'fields_get',

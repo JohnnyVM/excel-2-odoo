@@ -35,7 +35,16 @@ class OdooMany2OneDelegate(QStyledItemDelegate):
         model.setData(index, [idm, text], Qt.ItemDataRole.EditRole)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
-        idx, value = index.data()
+        model = index.model()
+        field_name = [f for f in model._fields.keys()][index.column()]
+        rel_model = model._relational_model[field_name]
+        value = ""
+        if index.data():
+            for ids in index.data():
+                for rel_row in rel_model._data:
+                    if ids == rel_row['id']:
+                        value = tuple(rel_row.values())[1]
+
         super().paint(painter, option, index)
         painter.drawText(option.rect, Qt.AlignmentFlag.AlignCenter, value)
 
