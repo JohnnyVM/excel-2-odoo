@@ -23,7 +23,7 @@ def valid_model(model: OdooModel):
     for idx, row in enumerate(model._data):
         for field in MANDATORY_FIELDS:
             if row[field] is None:
-                qWarning(f"{model._name} missing value {field} in row {idx}")
+                qWarning(f"{model.name} missing value {field} in row {idx}")
                 valid = False
     return valid
 
