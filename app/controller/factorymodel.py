@@ -62,7 +62,7 @@ def factoryExcelOdooModel(excel_file: str, parent):
                 model._data[row][field] = text2many2manyfield(
                     model._data[row][field], model._relational_model[field])
             if attributes.get('type', None) == 'many2one':
-                model._data[row][field] = text2many2manyfield(
+                model._data[row][field] = text2many2onefield(
                     model._data[row][field], model._relational_model[field])
 
     wb.close()
