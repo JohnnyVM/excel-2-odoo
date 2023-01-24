@@ -30,7 +30,6 @@ def create_purchase_order(conn, header: OdooModel, lines: OdooModel):
             'display_name',
             'uom_po_id',
             'product_variant_id']})
-    assert len(odoo_products) == len(barcodes)
 
     def create_line(row: dict) -> dict:
         return {
