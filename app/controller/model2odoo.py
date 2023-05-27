@@ -13,12 +13,28 @@ DEFAULT_PRODUCT_VALUES = {
     'available_in_pos': True,
 }
 
+def duplicated_items(items: list[any]) -> list[any]:
+    seen = set()
+    dupes = []
 
-def valid_model(model: OdooModel):
+    for x in items:
+        if x in seen:
+            dupes.append(x)
+        else:
+            seen.add(x)
+
+    return dupes
+
+def valid_model(model: OdooModel) -> bool:
+    """ Check the data model is valid.
+          - No duplicated barcodes
+          - No missing values in mandatory fields
+    """
     valid = True
     barcodes = tuple(row['barcode'] for row in model._data)
-    if len(barcodes) != len(set(barcodes)):
-        qWarning('Duplicated barcodes.')
+    duplicated = duplicated_items(barcodes)
+    if duplicated:
+        qWarning(f'Barcodes {duplicated} duplicated.\naborting')
         valid = False
     for idx, row in enumerate(model._data):
         for field in MANDATORY_FIELDS:
