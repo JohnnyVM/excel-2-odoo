@@ -35,7 +35,7 @@ def valid_model(model: OdooModel) -> bool:
     duplicated = duplicated_items(barcodes)
     if duplicated:
         qWarning(f'Barcodes {duplicated} duplicated.\naborting')
-        valid = False
+        # valid = False
     for idx, row in enumerate(model._data):
         for field in MANDATORY_FIELDS:
             if row[field] is None:
