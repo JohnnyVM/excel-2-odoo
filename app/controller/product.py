@@ -29,6 +29,8 @@ class ProductController:
         available = self._fields()
         clean = {key: value for key, value in values.items() if key in available and value is not None}
         if product_id is None:
+            if "available_in_pos" in available:
+                clean["available_in_pos"] = True
             return self.conn.execute_kw("product.template", "create", [clean])
         self.conn.execute_kw("product.template", "write", [[product_id], clean])
         return product_id

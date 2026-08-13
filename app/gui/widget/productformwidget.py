@@ -24,12 +24,17 @@ class _LookupWorker(QObject):
     finished = pyqtSignal(object, object)
     progress = pyqtSignal(str)
 
-    def __init__(self, barcode: str):
+    def __init__(self, barcode: str, amazon_only: bool = False):
         super().__init__()
         self.barcode = barcode
+        self.amazon_only = amazon_only
 
     def run(self):
         try:
+            if self.amazon_only:
+                self._progress("Amazon-only search started")
+                self._search_amazon()
+                return
             self._progress("Connecting to Odoo...")
             controller = ProductController(get_odoo(settings.conf))
             self._progress(f"Checking barcode {self.barcode} in product.template...")
@@ -39,19 +44,20 @@ class _LookupWorker(QObject):
                 self.finished.emit({"odoo": existing}, None)
                 return
             self._progress("Barcode not found in Odoo")
-            try:
-                self._progress("Searching UPCitemdb...")
-                upc = UPCItemDB().search(self.barcode)
-                if upc:
-                    image = self._download_image(upc.image_url)
-                    self._progress("UPCitemdb product found")
-                    self.finished.emit({"upc": upc, "image": image}, None)
-                    return
-                self._progress("UPCitemdb returned no product")
-            except UPCItemDBRateLimitError as exc:
-                self._progress(f"BLOCKED: {exc}; trying Amazon fallback")
-            except Exception as exc:
-                self._progress(f"UPCitemdb unavailable: {exc}; trying Amazon fallback")
+            if not self.amazon_only:
+                try:
+                    self._progress("Searching UPCitemdb...")
+                    upc = UPCItemDB().search(self.barcode)
+                    if upc:
+                        image = self._download_image(upc.image_url)
+                        self._progress("UPCitemdb product found")
+                        self.finished.emit({"upc": upc, "image": image}, None)
+                        return
+                    self._progress("UPCitemdb returned no product")
+                except UPCItemDBRateLimitError as exc:
+                    self._progress(f"BLOCKED: {exc}; trying Amazon fallback")
+                except Exception as exc:
+                    self._progress(f"UPCitemdb unavailable: {exc}; trying Amazon fallback")
             try:
                 self._progress("Opening Amazon search...")
                 amazon_cfg = settings.conf["amazon"]
@@ -66,6 +72,19 @@ class _LookupWorker(QObject):
             self.finished.emit({"amazon": amazon}, None)
         except Exception as exc:
             self.finished.emit(None, str(exc))
+
+    def _search_amazon(self):
+        try:
+            self._progress("Opening Amazon search...")
+            amazon_cfg = settings.conf["amazon"]
+            amazon = AmazonScraper(
+                marketplace=amazon_cfg.get("marketplace", "www.amazon.com"),
+                timeout_ms=int(amazon_cfg.get("timeout_ms", 15000)),
+            ).search(self.barcode)
+            self._progress("Amazon search finished")
+            self.finished.emit({"amazon": amazon}, None)
+        except Exception as exc:
+            self.finished.emit({"amazon_error": str(exc)}, None)
 
     @staticmethod
     def _download_image(url):
@@ -93,9 +112,13 @@ class ProductFormWidget(QWidget):
         self.barcode_search = QLineEdit()
         self.barcode_search.setPlaceholderText("Barcode")
         self.search_button = QPushButton("Search")
+        self.amazon_search_button = QPushButton("Amazon search")
         search_row = QHBoxLayout()
         search_row.addWidget(self.barcode_search)
         search_row.addWidget(self.search_button)
+        search_column = QVBoxLayout()
+        search_column.addLayout(search_row)
+        search_column.addWidget(self.amazon_search_button)
 
         self.tags = QLineEdit()
         self.name = QLineEdit()
@@ -121,7 +144,7 @@ class ProductFormWidget(QWidget):
         self.cancel_button = QPushButton("Cancel")
 
         form = QFormLayout()
-        form.addRow("Search barcode", search_row)
+        form.addRow("Search barcode", search_column)
         form.addRow("Tags", self.tags)
         form.addRow("Name", self.name)
         form.addRow("Barcode", self.barcode)
@@ -140,6 +163,7 @@ class ProductFormWidget(QWidget):
         layout.addLayout(buttons)
 
         self.search_button.clicked.connect(self.lookup)
+        self.amazon_search_button.clicked.connect(self.lookup_amazon)
         self.barcode_search.returnPressed.connect(self.lookup)
         self.save_button.clicked.connect(self.save)
         self.cancel_button.clicked.connect(self.reset)
@@ -147,6 +171,12 @@ class ProductFormWidget(QWidget):
         self.load_url_button.clicked.connect(self.load_url)
 
     def lookup(self):
+        self._start_lookup(amazon_only=False)
+
+    def lookup_amazon(self):
+        self._start_lookup(amazon_only=True)
+
+    def _start_lookup(self, amazon_only=False):
         barcode = self.barcode_search.text().strip()
         if not barcode:
             self.status.setText("Enter a barcode")
@@ -155,7 +185,7 @@ class ProductFormWidget(QWidget):
         self.log.clear()
         self._append_log("Search started")
         self._thread = QThread(self)
-        worker = _LookupWorker(barcode)
+        worker = _LookupWorker(barcode, amazon_only=amazon_only)
         self._worker = worker
         worker.moveToThread(self._thread)
         self._thread.started.connect(worker.run)
@@ -288,7 +318,7 @@ class ProductFormWidget(QWidget):
             self.image.setPixmap(pixmap)
 
     def _set_busy(self, busy, message=None):
-        self.search_button.setEnabled(not busy); self.save_button.setEnabled(not busy)
+        self.search_button.setEnabled(not busy); self.amazon_search_button.setEnabled(not busy); self.save_button.setEnabled(not busy)
         self.barcode_search.setEnabled(not busy)
         if message: self.status.setText(message)
 
