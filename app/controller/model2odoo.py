@@ -27,7 +27,7 @@ def duplicated_items(items: list[any]) -> list[any]:
 
 
 def missing_required_fields(model: OdooModel) -> list[str]:
-    return [field for field in MANDATORY_FIELDS if field not in model._fields]
+    return [field for field in MANDATORY_FIELDS if field not in model.exportFields()]
 
 def valid_model(model: OdooModel) -> bool:
     """ Check the data model is valid.

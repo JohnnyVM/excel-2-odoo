@@ -37,6 +37,8 @@ class OdooTableView(QTableView):
         self._column_header.clickedSection.connect(self._show_column_selector)
         for column in range(model.columnCount()):
             field = model.headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole)
+            if not field:
+                continue
             attributes = tuple(field.values())[0]
             if 'relation' in attributes and attributes['type'] == 'many2one':
                 self.setItemDelegateForColumn(column, OdooMany2OneDelegate(parent=self))
@@ -53,7 +55,8 @@ class OdooTableView(QTableView):
         self._selector = selector
         selector.addItem('(Ignore column)', None)
         for field in self.model().availableColumnNames():
-            selector.addItem(field, field)
+            attributes = self.model()._field_attributes(field)
+            selector.addItem(attributes.get('string', field), field)
         selected = self.model().columnSelection()[column]
         selector.setCurrentIndex(selector.findData(selected))
         selector.setMinimumWidth(max(220, self.columnWidth(column)))

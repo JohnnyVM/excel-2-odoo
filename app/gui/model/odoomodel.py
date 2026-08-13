@@ -46,6 +46,7 @@ class OdooModel(QAbstractTableModel):
         self._conn = conn
         self._column_selection = None
         self._column_sources = None
+        self._available_fields = None
 
         if 'domain' in kwargs:
             self.domain = kwargs['domain']
@@ -147,8 +148,8 @@ class OdooModel(QAbstractTableModel):
         return len(self._fields)
 
     def availableColumnNames(self) -> tuple[str, ...]:
-        """Return the imported columns that can be selected in the header."""
-        return tuple(self._fields.keys())
+        """Return Odoo fields available as output keys."""
+        return tuple((self._available_fields or self._fields).keys())
 
     def columnSelection(self) -> tuple[str | None, ...]:
         """Return the source field selected for each displayed column."""
@@ -160,6 +161,9 @@ class OdooModel(QAbstractTableModel):
         if self._column_sources is None:
             return self.availableColumnNames()[column]
         return self._column_sources[column]
+
+    def _field_attributes(self, field: str) -> dict:
+        return (self._available_fields or self._fields)[field]
 
     def setColumnSelection(self, column: int, field: str | None) -> bool:
         """Change the output key without changing the displayed values."""
@@ -175,7 +179,7 @@ class OdooModel(QAbstractTableModel):
     def exportFields(self) -> dict:
         """Return only selected output keys, while leaving the table untouched."""
         return {
-            field: self._fields[field]
+            field: self._field_attributes(field)
             for field in self.columnSelection()
             if field is not None
         }
@@ -200,7 +204,7 @@ class OdooModel(QAbstractTableModel):
         original_data = self._data
         sources = self._column_sources or self.availableColumnNames()
         selected = [
-            (field, original_fields[field], source)
+            (field, self._field_attributes(field), source)
             for field, source in zip(selection, sources)
             if field is not None
         ]
@@ -265,7 +269,7 @@ class OdooModel(QAbstractTableModel):
                 field_name = self.columnSelection()[section]
                 if field_name is None:
                     return 'Ignored column'
-                field = self._fields[field_name]
+                field = self._field_attributes(field_name)
                 return field.get('string', field_name)
 
             if role == Qt.ItemDataRole.ToolTipRole:
@@ -278,7 +282,7 @@ class OdooModel(QAbstractTableModel):
                 name = self.columnSelection()[section]
                 if name is None:
                     return {}
-                return {name: self._fields[name]}
+                return {name: self._field_attributes(name)}
 
         if orientation == Qt.Orientation.Vertical:
             if section > self.rowCount():
