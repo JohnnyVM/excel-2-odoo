@@ -6,7 +6,7 @@ import os
 from .. import settings
 from ..dependencies import get_odoo
 from ..gui.model.odoomodel import OdooModel
-from .fuzzyfinder import match_headers
+from .fuzzyfinder import match_headers, selectable_odoo_fields
 from .textcleaner import clean_import_text
 
 
@@ -47,8 +47,9 @@ def factoryExcelOdooModel(excel_file: str, parent):
         iter_rows = sheet.iter_rows()
         fields = tuple(clean_import_text(c.value) for c in next(iter_rows))
     raw_fields = model._conn.execute_kw('product.template', 'fields_get', [], {})
-    matched_fields = match_headers(fields, raw_fields)
-    model._available_fields = raw_fields
+    selectable_fields = selectable_odoo_fields(raw_fields)
+    matched_fields = match_headers(fields, selectable_fields)
+    model._available_fields = selectable_fields
     model._fields = {}
     model._column_sources = []
     model._column_selection = list(matched_fields)

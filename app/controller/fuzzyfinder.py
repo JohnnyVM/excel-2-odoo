@@ -10,10 +10,10 @@ from typing import Mapping
 
 # Product identification aliases.
 BARCODE_ALIASES = (
-    "ean", "ean13", "ean 13", "upc", "isbn", "gtin", "barcode", "codigo de barras",
+    "ean", "ean13", "ean 13", "upc", "gtin", "barcode", "codigo de barras",
 )
 INTERNAL_REFERENCE_ALIASES = (
-    "sku", "internal reference", "item code", "product code", "referencia interna",
+    "sku", "isbn", "internal reference", "item code", "product code", "referencia interna",
 )
 
 # Product pricing aliases.
@@ -46,6 +46,20 @@ COMMON_TERMS = {
     "name": NAME_ALIASES,
     "description": DESCRIPTION_ALIASES,
 }
+
+
+def selectable_odoo_fields(fields: Mapping[str, Mapping[str, object]]) -> dict:
+    """Return fields suitable for CSV/Excel column mapping."""
+    excluded_types = {"many2many", "boolean"}
+    return {
+        name: attributes
+        for name, attributes in fields.items()
+        if attributes.get("type") not in excluded_types
+        and not (
+            attributes.get("type") in {"binary", "image"}
+            and name != "image_1920"
+        )
+    }
 
 
 def _normalise(value: object) -> str:

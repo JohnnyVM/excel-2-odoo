@@ -1,6 +1,6 @@
 import unittest
 
-from app.controller.fuzzyfinder import match_headers
+from app.controller.fuzzyfinder import match_headers, selectable_odoo_fields
 
 
 FIELDS = {
@@ -27,7 +27,14 @@ class TestFuzzyFinder(unittest.TestCase):
         self.assertEqual(match_headers(("warehouse notes",), FIELDS), (None,))
 
     def test_common_barcode_terms_match_barcode(self):
-        self.assertEqual(match_headers(("EAN", "ISBN"), {"barcode": FIELDS["barcode"]}), ("barcode", None))
+        self.assertEqual(match_headers(("EAN",), {"barcode": FIELDS["barcode"]}), ("barcode",))
+
+    def test_isbn_matches_internal_reference_not_barcode(self):
+        fields = {
+            "barcode": FIELDS["barcode"],
+            "default_code": FIELDS["default_code"],
+        }
+        self.assertEqual(match_headers(("ISBN",), fields), ("default_code",))
 
     def test_spanish_price_and_tax_aliases(self):
         fields = {
@@ -35,6 +42,19 @@ class TestFuzzyFinder(unittest.TestCase):
             "taxes_id": {"string": "Customer Taxes"},
         }
         self.assertEqual(match_headers(("PVP", "IVA"), fields), ("list_price", "taxes_id"))
+
+    def test_selectable_fields_exclude_unwanted_types(self):
+        fields = {
+            "tags": {"type": "many2many"},
+            "active": {"type": "boolean"},
+            "image_128": {"type": "binary"},
+            "image_1920": {"type": "binary"},
+            "name": {"type": "char"},
+        }
+        self.assertEqual(
+            tuple(selectable_odoo_fields(fields)),
+            ("image_1920", "name"),
+        )
 
 
 if __name__ == "__main__":
