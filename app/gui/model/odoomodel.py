@@ -272,7 +272,7 @@ class OdooModel(QAbstractTableModel):
                 field_name = self.columnSelection()[section]
                 if field_name is None:
                     return 'This column will be ignored when applying the import.'
-                return self._fields[field_name].get('help', '')
+                return self._field_attributes(field_name).get('help', '')
 
             if role == Qt.ItemDataRole.UserRole:
                 name = self.columnSelection()[section]
