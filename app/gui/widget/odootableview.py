@@ -10,10 +10,17 @@ class _ColumnSelectorHeader(QHeaderView):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            section = self.logicalIndexAt(event.position().toPoint())
+            position = event.position().toPoint()
+            section = self.logicalIndexAt(position)
             if section >= 0:
-                self.clickedSection.emit(section, event.position().toPoint())
-                return
+                start = self.sectionViewportPosition(section)
+                width = self.sectionSize(section)
+                # Leave the resize handle to QHeaderView. Normal header
+                # clicks continue to open the field selector.
+                near_boundary = abs(position.x() - start) <= 5 or abs(position.x() - (start + width)) <= 5
+                if not near_boundary:
+                    self.clickedSection.emit(section, position)
+                    return
         super().mousePressEvent(event)
 
 
@@ -22,6 +29,7 @@ class OdooTableView(QTableView):
     def __init__(self, parent=None):
         QTableView.__init__(self, parent)
         self._column_header = _ColumnSelectorHeader(Qt.Orientation.Horizontal, self)
+        self._column_header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.setHorizontalHeader(self._column_header)
         self._selector = None
 
