@@ -8,12 +8,19 @@ class Settings(dict):
             "port": 8069,
             "host": "localhost",
             "database": "odoo",
+            },
+        "amazon": {
+            "marketplace": "www.amazon.com",
+            "timeout_ms": 15000,
             }
         }
 
     def __init__(self, config: ConfigParser, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
         for ite in config:
+            if ite == "DEFAULT":
+                continue
+            self.__values.setdefault(ite, {})
             for key, val in config[ite].items():
                 self.__values[ite][key] = val
 

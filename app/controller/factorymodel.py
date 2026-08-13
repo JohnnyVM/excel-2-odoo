@@ -1,5 +1,7 @@
 from PyQt6.QtCore import Qt, qInfo
 import openpyxl
+import csv
+import os
 
 from .. import settings
 from ..dependencies import get_odoo
@@ -24,16 +26,27 @@ def text2many2onefield(text, model: OdooModel):
 
 
 def factoryExcelOdooModel(excel_file: str, parent):
-    wb = openpyxl.load_workbook(
-        filename=excel_file, read_only=True, data_only=True)
-    sheet = wb[wb.sheetnames[0]]  # only the first
-
-    iter_rows = sheet.iter_rows()
     model = OdooModel(
         conn=get_odoo(settings.conf),
         company_id=parent.company_id,
         autoload=False)
-    fields = tuple(map(lambda c: c.value, next(iter_rows)))
+    is_csv = os.path.splitext(excel_file)[1].lower() == '.csv'
+    wb = None
+    csv_file = None
+    if is_csv:
+        csv_file = open(excel_file, newline='', encoding='utf-8-sig')
+        iter_rows = csv.reader(csv_file)
+        try:
+            fields = tuple(next(iter_rows))
+        except StopIteration:
+            csv_file.close()
+            return
+    else:
+        wb = openpyxl.load_workbook(
+            filename=excel_file, read_only=True, data_only=True)
+        sheet = wb[wb.sheetnames[0]]  # only the first
+        iter_rows = sheet.iter_rows()
+        fields = tuple(map(lambda c: c.value, next(iter_rows)))
     raw_fields = model._conn.execute_kw(
         'product.template',
         'fields_get',
@@ -41,6 +54,10 @@ def factoryExcelOdooModel(excel_file: str, parent):
     for mfield in MANDATORY_FIELDS:
         if mfield not in fields:
             qInfo(f"missing field {mfield}")
+            if csv_file:
+                csv_file.close()
+            if wb:
+                wb.close()
             return
 
     # ensure the order
@@ -50,7 +67,8 @@ def factoryExcelOdooModel(excel_file: str, parent):
         else:
             model._fields[field] = {'string': field}
     for row in iter_rows:
-        model._data.append(dict(zip(model._fields.keys(), map(lambda r: r.value, row))))
+        values = row if is_csv else map(lambda r: r.value, row)
+        model._data.append(dict(zip(model._fields.keys(), values)))
     model._loadRelationalData()
 
     # Here is necesary transform the raw data from exel to odoo
@@ -65,5 +83,8 @@ def factoryExcelOdooModel(excel_file: str, parent):
                 model._data[row][field] = text2many2onefield(
                     model._data[row][field], model._relational_model[field])
 
-    wb.close()
+    if csv_file:
+        csv_file.close()
+    if wb:
+        wb.close()
     return model

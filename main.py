@@ -6,6 +6,7 @@
 # Only needed for access to command line arguments
 import sys
 import configparser
+import logging
 
 from PyQt6.QtWidgets import QApplication
 
@@ -21,6 +22,11 @@ __version__ = "0.0.3"
 if __name__ == "__main__":
     # Start the app
 
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+        filename="excel-2-odoo.log",
+    )
     # necesary
     app = QApplication(sys.argv)
     app.setApplicationVersion(__version__)

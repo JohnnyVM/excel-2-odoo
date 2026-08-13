@@ -5,7 +5,8 @@ from PyQt6.QtWidgets import (
     QWidget,
     QFileDialog,
     QDialogButtonBox,
-    QVBoxLayout)
+    QVBoxLayout,
+    QTabWidget)
 
 from ... import settings
 from ...dependencies import get_odoo
@@ -20,6 +21,7 @@ from ...controller.model2odoo import (
     valid_model,
     create_products_from_model,
     update_products_from_model)
+from ..widget.productformwidget import ProductFormWidget
 
 
 class MainWindow(QWidget):
@@ -44,9 +46,9 @@ class MainWindow(QWidget):
         if button.text() == "Open":
             excelfile, _ = QFileDialog.getOpenFileName(
                 self,
-                'Select Excel file',
+                'Select spreadsheet file',
                 os.getcwd(),
-                "Excel files (*.xlsx *.xlsm)")
+                "Spreadsheet files (*.xlsx *.xlsm *.csv);;Excel files (*.xlsx *.xlsm);;CSV files (*.csv)")
             if not excelfile:
                 return
             model = factoryExcelOdooModel(excelfile, self)
@@ -90,10 +92,17 @@ class MainWindow(QWidget):
         self.purchaseTable.horizontalHeader().setStretchLastSection(True)
         self.mainButtons.clicked.connect(self.mainButtonsBehaviour)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.company_selector)
-        layout.addWidget(self.supplier_form)
-        layout.addWidget(self.purchaseTable)
-        layout.addWidget(self.mainButtons)
+        purchase_tab = QWidget(self)
+        purchase_layout = QVBoxLayout(purchase_tab)
+        purchase_layout.addWidget(self.company_selector)
+        purchase_layout.addWidget(self.supplier_form)
+        purchase_layout.addWidget(self.purchaseTable)
+        purchase_layout.addWidget(self.mainButtons)
 
+        tabs = QTabWidget(self)
+        tabs.addTab(purchase_tab, "Purchase import")
+        tabs.addTab(ProductFormWidget(self), "Create product")
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(tabs)
         self.setLayout(layout)

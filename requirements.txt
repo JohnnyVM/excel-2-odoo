@@ -4,3 +4,5 @@ openpyxl==3.0.10
 PyQt6==6.4.0
 PyQt6-Qt6==6.4.1
 PyQt6-sip==13.4.0
+# Optional Amazon page lookup (also run: playwright install chromium)
+playwright==1.57.0

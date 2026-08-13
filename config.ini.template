@@ -5,3 +5,7 @@ user=
 password=
 database=
 
+[amazon]
+marketplace=www.amazon.com
+timeout_ms=15000
+
