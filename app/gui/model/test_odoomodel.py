@@ -1,6 +1,7 @@
 import unittest
 
 from copy import deepcopy
+from PyQt6.QtCore import Qt
 
 from . import odoomodel
 
@@ -73,6 +74,17 @@ class TestOdooModel(unittest.TestCase):
         model.insertRows(0, 3)
         self.assertEqual(model.rowCount(), 3)
         self.assertEqual(len(model._data[0]), len(FIELDS))
+
+    def test_ignored_column_keeps_values_for_display_and_export(self):
+        model = odoomodel.OdooModel(conn=None, name='test_ignored', autoload=False)
+        model._available_fields = deepcopy(FIELDS)
+        model._fields = {'csv_column': {'string': 'Imported column'}}
+        model._column_sources = ['csv_column']
+        model._column_selection = [None]
+        model._data = [{'csv_column': 'kept value'}]
+
+        self.assertEqual(model.data(model.index(0, 0), Qt.ItemDataRole.DisplayRole), 'kept value')
+        self.assertEqual(model.exportData(), [{}])
 
 
 if __name__ == '__main__':

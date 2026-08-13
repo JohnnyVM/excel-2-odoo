@@ -244,8 +244,6 @@ class OdooModel(QAbstractTableModel):
         if role == Qt.ItemDataRole.DisplayRole\
                 or role == Qt.ItemDataRole.EditRole:
             field_name = self.columnSelection()[index.column()]
-            if field_name is None:
-                return None
             return self._data[index.row()][self._column_source(index.column())]
 
         return QVariant()
@@ -254,8 +252,6 @@ class OdooModel(QAbstractTableModel):
         if not index.isValid():
             return False
         field_name = self.columnSelection()[index.column()]
-        if field_name is None:
-            return False
         self._data[index.row()][self._column_source(index.column())] = value
         self.dataChanged.emit(index, index, (role,))
         return True

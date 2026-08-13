@@ -26,6 +26,16 @@ class TestFuzzyFinder(unittest.TestCase):
     def test_leaves_uncertain_headers_unmatched(self):
         self.assertEqual(match_headers(("warehouse notes",), FIELDS), (None,))
 
+    def test_common_barcode_terms_match_barcode(self):
+        self.assertEqual(match_headers(("EAN", "ISBN"), {"barcode": FIELDS["barcode"]}), ("barcode", None))
+
+    def test_spanish_price_and_tax_aliases(self):
+        fields = {
+            "list_price": {"string": "Sales Price"},
+            "taxes_id": {"string": "Customer Taxes"},
+        }
+        self.assertEqual(match_headers(("PVP", "IVA"), fields), ("list_price", "taxes_id"))
+
 
 if __name__ == "__main__":
     unittest.main()

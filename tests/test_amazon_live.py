@@ -21,6 +21,14 @@ class TestAmazonLive(unittest.TestCase):
         self.assertIsNotNone(result)
         self.assertTrue(result.name or result.description or result.image)
 
+    def test_ean_8436545691496_returns_description_and_image(self):
+        from app.services.amazon import AmazonScraper
+
+        result = AmazonScraper(marketplace="www.amazon.es").search("8436545691496")
+        self.assertIsNotNone(result)
+        self.assertTrue(result.description, "Amazon result did not include a description")
+        self.assertTrue(result.image, "Amazon result did not include an image")
+
 
 if __name__ == "__main__":
     unittest.main()

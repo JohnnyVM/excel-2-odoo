@@ -62,7 +62,12 @@ class AmazonScraper:
                     raise RuntimeError("Amazon blocked the request (CAPTCHA/access denied)")
                 if "lo sentimos" in body or "error al intentar procesar" in body:
                     raise RuntimeError("Amazon returned an error page; retry later or change marketplace")
-                result = page.locator("div[data-component-type='s-search-result'], div[data-asin]").first
+                # Restrict this to actual search-result cards. A broad
+                # div[data-asin] fallback can select Amazon's generic
+                # navigation/result container whose title is just "Resultados".
+                result = page.locator("div[data-component-type='s-search-result']").first
+                if result.count() == 0:
+                    result = page.locator("div[data-asin][data-index]").first
                 if result.count() == 0:
                     return None
                 title_locator = result.locator("h2, [data-cy='title-recipe'], span.a-text-normal").first
