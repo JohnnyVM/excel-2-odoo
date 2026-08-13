@@ -6,8 +6,22 @@ import os
 from .. import settings
 from ..dependencies import get_odoo
 from ..gui.model.odoomodel import OdooModel
-from .fuzzyfinder import match_headers, selectable_odoo_fields
+from .fuzzyfinder import match_headers
 from .textcleaner import clean_import_text
+
+
+IMPORT_FIELDS = (
+    "barcode",
+    "name",
+    "default_code",
+    "list_price",
+    "taxes_id",
+    "supplier_taxes_id",
+    "product_qty",
+    "price_unit",
+    "standard_price",
+    "categ_id",
+)
 
 
 def text2many2manyfield(text, model: OdooModel):
@@ -46,8 +60,15 @@ def factoryExcelOdooModel(excel_file: str, parent):
         sheet = wb[wb.sheetnames[0]]  # only the first
         iter_rows = sheet.iter_rows()
         fields = tuple(clean_import_text(c.value) for c in next(iter_rows))
-    raw_fields = model._conn.execute_kw('product.template', 'fields_get', [], {})
-    selectable_fields = selectable_odoo_fields(raw_fields)
+    raw_fields = model._conn.execute_kw(
+        'product.template',
+        'fields_get',
+        [list(IMPORT_FIELDS)],
+    )
+    selectable_fields = {
+        field: raw_fields.get(field, {'string': field})
+        for field in IMPORT_FIELDS
+    }
     matched_fields = match_headers(fields, selectable_fields)
     model._available_fields = selectable_fields
     model._fields = {}
