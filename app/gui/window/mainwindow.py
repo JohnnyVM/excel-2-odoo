@@ -5,7 +5,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QFileDialog,
     QDialogButtonBox,
-    QVBoxLayout,
+    QVBoxLayout, QMessageBox,
     QTabWidget)
 
 from ... import settings
@@ -20,7 +20,8 @@ from ...controller.factorymodel import factoryExcelOdooModel
 from ...controller.model2odoo import (
     valid_model,
     create_products_from_model,
-    update_products_from_model)
+    update_products_from_model,
+    missing_required_fields)
 from ..widget.productformwidget import ProductFormWidget
 
 
@@ -35,6 +36,15 @@ class MainWindow(QWidget):
         if button.text() == "Apply":
             model = self.purchaseTable.model()
             if not model:
+                return
+            missing_fields = missing_required_fields(model)
+            if missing_fields:
+                QMessageBox.warning(
+                    self,
+                    "Missing required columns",
+                    "The import cannot be applied because these required columns are missing:\n\n"
+                    + "\n".join(f"• {field}" for field in missing_fields),
+                )
                 return
             if not valid_model(model):
                 return

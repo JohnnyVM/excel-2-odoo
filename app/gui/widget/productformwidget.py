@@ -41,7 +41,13 @@ class _LookupWorker(QObject):
             existing = controller.find_by_barcode(self.barcode)
             if existing:
                 self._progress("Product found in Odoo")
-                self.finished.emit({"odoo": existing}, None)
+                missing_description = not (existing.get("description") or existing.get("description_sale"))
+                missing_image = not existing.get("image_1920")
+                if missing_description or missing_image:
+                    result = self._search_missing_data(existing, missing_description, missing_image)
+                    self.finished.emit(result, None)
+                else:
+                    self.finished.emit({"odoo": existing}, None)
                 return
             self._progress("Barcode not found in Odoo")
             if not self.amazon_only:
@@ -72,6 +78,40 @@ class _LookupWorker(QObject):
             self.finished.emit({"amazon": amazon}, None)
         except Exception as exc:
             self.finished.emit(None, str(exc))
+
+    def _search_missing_data(self, existing, missing_description, missing_image):
+        """Enrich an Odoo match without replacing values already stored there."""
+        result = {"odoo": existing}
+        upc = None
+        try:
+            self._progress("Description or image missing; searching UPCitemdb...")
+            upc = UPCItemDB().search(self.barcode)
+            if upc:
+                result["upc"] = upc
+                result["image"] = self._download_image(upc.image_url)
+                self._progress("UPCitemdb fallback finished")
+            else:
+                self._progress("UPCitemdb returned no product; trying Amazon fallback")
+        except UPCItemDBRateLimitError as exc:
+            self._progress(f"BLOCKED: {exc}; trying Amazon fallback")
+        except Exception as exc:
+            self._progress(f"UPCitemdb unavailable: {exc}; trying Amazon fallback")
+
+        upc_has_description = bool(upc and upc.description)
+        upc_has_image = bool(result.get("image"))
+        if (missing_description and not upc_has_description) or (missing_image and not upc_has_image):
+            try:
+                self._progress("Opening Amazon fallback...")
+                amazon_cfg = settings.conf["amazon"]
+                result["amazon"] = AmazonScraper(
+                    marketplace=amazon_cfg.get("marketplace", "www.amazon.com"),
+                    timeout_ms=int(amazon_cfg.get("timeout_ms", 15000)),
+                ).search(self.barcode)
+                self._progress("Amazon fallback finished")
+            except Exception as exc:
+                result["amazon_error"] = str(exc)
+                self._progress(f"Amazon fallback unavailable: {exc}")
+        return result
 
     def _search_amazon(self):
         try:
@@ -123,6 +163,8 @@ class ProductFormWidget(QWidget):
         self.tags = QLineEdit()
         self.name = QLineEdit()
         self.barcode = QLineEdit()
+        self.list_price = QLineEdit()
+        self.list_price.setPlaceholderText("0.00")
         self.description = QPlainTextEdit()
         self.default_code = QLineEdit()
         self.image_url = QLineEdit()
@@ -149,6 +191,7 @@ class ProductFormWidget(QWidget):
         form.addRow("Name", self.name)
         form.addRow("Barcode", self.barcode)
         form.addRow("Internal reference", self.default_code)
+        form.addRow("List price", self.list_price)
         form.addRow("Description", self.description)
         form.addRow("Image source", image_sources)
         form.addRow("Image", self.image)
@@ -213,7 +256,13 @@ class ProductFormWidget(QWidget):
             self.name.setText(data.get("name") or "")
             self.barcode.setText(data.get("barcode") or self.barcode_search.text())
             self.default_code.setText(data.get("default_code") or "")
-            self.description.setPlainText(data.get("description") or data.get("description_sale") or "")
+            list_price = data.get("list_price")
+            self.list_price.setText(str(list_price) if list_price is not None else "")
+            description = data.get("description") or data.get("description_sale") or ""
+            if not description:
+                for provider in (result.get("upc"), result.get("amazon")):
+                    description = getattr(provider, "description", "") or description
+            self.description.setPlainText(description)
             tag_values = data.get("product_tag_ids") or []
             self.tags.setText(", ".join(
                 value[1] if isinstance(value, (list, tuple)) and len(value) > 1 else str(value)
@@ -223,6 +272,12 @@ class ProductFormWidget(QWidget):
             self.save_button.setText("Update")
             if data.get("image_1920"):
                 self._set_image(base64.b64decode(data["image_1920"]))
+            elif result.get("image"):
+                self._set_image(result["image"])
+            elif result.get("amazon") and result["amazon"].image:
+                self._set_image(result["amazon"].image)
+            if result.get("upc") or result.get("amazon"):
+                self.status.setText("Existing product loaded; missing fields enriched from providers")
             return
         upc = result.get("upc")
         if upc:
@@ -250,12 +305,15 @@ class ProductFormWidget(QWidget):
             self.status.setText("Name and barcode are required")
             return
         try:
+            list_price_text = self.list_price.text().strip().replace(",", ".")
             values = {
                 "name": name,
                 "barcode": barcode,
                 "default_code": self.default_code.text().strip(),
                 "description": self.description.toPlainText(),
             }
+            if list_price_text:
+                values["list_price"] = float(list_price_text)
             controller = ProductController(get_odoo(settings.conf))
             tag_ids = controller.tag_ids(self.tags.text())
             if tag_ids:
@@ -305,7 +363,7 @@ class ProductFormWidget(QWidget):
     def reset(self, keep_search=False, keep_log=False):
         if not keep_search:
             self.barcode_search.clear()
-        self.tags.clear(); self.name.clear(); self.barcode.clear(); self.default_code.clear(); self.description.clear(); self.image_url.clear()
+        self.tags.clear(); self.name.clear(); self.barcode.clear(); self.default_code.clear(); self.list_price.clear(); self.description.clear(); self.image_url.clear()
         if not keep_log:
             self.log.clear()
         self.image.clear(); self.image.setText("No image"); self.status.clear()

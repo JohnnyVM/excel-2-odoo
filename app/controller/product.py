@@ -18,7 +18,10 @@ class ProductController:
         if not barcode:
             return None
         available = self._fields()
-        wanted = ["id", "barcode", "default_code", "name", "description", "description_sale", "image_1920", "product_tag_ids"]
+        wanted = [
+            "id", "barcode", "default_code", "name", "list_price",
+            "description", "description_sale", "image_1920", "product_tag_ids",
+        ]
         fields = [field for field in wanted if field in available]
         records = self.conn.execute_kw(
             "product.template", "search_read", [[("barcode", "=", barcode)]], {"fields": fields, "limit": 1}

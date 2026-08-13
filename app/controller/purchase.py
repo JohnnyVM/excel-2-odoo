@@ -16,7 +16,7 @@ def create_purchase_order(conn, header: OdooModel, lines: OdooModel):
     qInfo(f"Create order with id {pid}")
 
     # Get all products ids
-    data = deepcopy(lines._data)
+    data = deepcopy(lines.exportData())
     for row in data:
         row['barcode'] = str(row['barcode'])
     barcodes = tuple(str(row['barcode']) for row in data)

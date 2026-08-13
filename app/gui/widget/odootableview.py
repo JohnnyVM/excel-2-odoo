@@ -1,20 +1,40 @@
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QTableView
+from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtWidgets import QComboBox, QHeaderView, QTableView
 
 from ..model.odoomodel import OdooModel
 from .delegate.odoocomboboxdelegate import OdooMany2OneDelegate, OdooMany2ManyDelegate
+
+
+class _ColumnSelectorHeader(QHeaderView):
+    clickedSection = pyqtSignal(int, QPoint)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            section = self.logicalIndexAt(event.position().toPoint())
+            if section >= 0:
+                self.clickedSection.emit(section, event.position().toPoint())
+                return
+        super().mousePressEvent(event)
 
 
 class OdooTableView(QTableView):
 
     def __init__(self, parent=None):
         QTableView.__init__(self, parent)
+        self._column_header = _ColumnSelectorHeader(Qt.Orientation.Horizontal, self)
+        self.setHorizontalHeader(self._column_header)
+        self._selector = None
 
     def setModel(self, model: OdooModel):
         old_model = self.model()
+        try:
+            self._column_header.clickedSection.disconnect(self._show_column_selector)
+        except TypeError:
+            pass
         if old_model:
             old_model.removeRows(0, old_model.rowCount())
         super().setModel(model)
+        self._column_header.clickedSection.connect(self._show_column_selector)
         for column in range(model.columnCount()):
             field = model.headerData(column, Qt.Orientation.Horizontal, Qt.ItemDataRole.UserRole)
             attributes = tuple(field.values())[0]
@@ -22,3 +42,31 @@ class OdooTableView(QTableView):
                 self.setItemDelegateForColumn(column, OdooMany2OneDelegate(parent=self))
             if 'relation' in attributes and attributes['type'] == 'many2many':
                 self.setItemDelegateForColumn(column, OdooMany2ManyDelegate(parent=self))
+
+    def _show_column_selector(self, column: int, position: QPoint):
+        if not self.model():
+            return
+        if self._selector:
+            self._selector.deleteLater()
+        selector = QComboBox()
+        selector.setWindowFlags(Qt.WindowType.Popup)
+        self._selector = selector
+        selector.addItem('(Ignore column)', None)
+        for field in self.model().availableColumnNames():
+            selector.addItem(field, field)
+        selected = self.model().columnSelection()[column]
+        selector.setCurrentIndex(selector.findData(selected))
+        selector.setMinimumWidth(max(220, self.columnWidth(column)))
+        selector.activated.connect(lambda index: self._column_selected(column, selector, index))
+        global_pos = self._column_header.mapToGlobal(
+            QPoint(self._column_header.sectionViewportPosition(column), self._column_header.height())
+        )
+        selector.move(global_pos)
+        selector.show()
+        selector.showPopup()
+
+    def _column_selected(self, column: int, selector: QComboBox, index: int):
+        self.model().setColumnSelection(column, selector.itemData(index))
+        selector.hide()
+        selector.deleteLater()
+        self._selector = None

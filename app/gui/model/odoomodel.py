@@ -44,6 +44,8 @@ class OdooModel(QAbstractTableModel):
         """ """
         QAbstractTableModel.__init__(self, parent)
         self._conn = conn
+        self._column_selection = None
+        self._column_sources = None
 
         if 'domain' in kwargs:
             self.domain = kwargs['domain']
@@ -144,6 +146,74 @@ class OdooModel(QAbstractTableModel):
     def columnCount(self, parent: QModelIndex = ...) -> int:
         return len(self._fields)
 
+    def availableColumnNames(self) -> tuple[str, ...]:
+        """Return the imported columns that can be selected in the header."""
+        return tuple(self._fields.keys())
+
+    def columnSelection(self) -> tuple[str | None, ...]:
+        """Return the source field selected for each displayed column."""
+        if self._column_selection is None:
+            return self.availableColumnNames()
+        return tuple(self._column_selection)
+
+    def _column_source(self, column: int) -> str:
+        if self._column_sources is None:
+            return self.availableColumnNames()[column]
+        return self._column_sources[column]
+
+    def setColumnSelection(self, column: int, field: str | None) -> bool:
+        """Change the output key without changing the displayed values."""
+        available = self.availableColumnNames()
+        if column < 0 or column >= len(available) or (field is not None and field not in available):
+            return False
+        if self._column_selection is None:
+            self._column_selection = list(available)
+        self._column_selection[column] = field
+        self.headerDataChanged.emit(Qt.Orientation.Horizontal, column, column)
+        return True
+
+    def exportFields(self) -> dict:
+        """Return only selected output keys, while leaving the table untouched."""
+        return {
+            field: self._fields[field]
+            for field in self.columnSelection()
+            if field is not None
+        }
+
+    def exportData(self) -> list[dict]:
+        """Return selected rows mapped to output keys without deleting source values."""
+        selection = self.columnSelection()
+        sources = self._column_sources or self.availableColumnNames()
+        return [
+            {
+                field: row.get(source)
+                for field, source in zip(selection, sources)
+                if field is not None
+            }
+            for row in self._data
+        ]
+
+    def applyColumnSelection(self) -> None:
+        """Remove ignored columns and rebuild rows using the chosen columns."""
+        selection = self.columnSelection()
+        original_fields = self._fields
+        original_data = self._data
+        sources = self._column_sources or self.availableColumnNames()
+        selected = [
+            (field, original_fields[field], source)
+            for field, source in zip(selection, sources)
+            if field is not None
+        ]
+        self.beginResetModel()
+        self._fields = {field: attributes for field, attributes, _ in selected}
+        self._data = [
+            {field: row.get(source) for field, _, source in selected}
+            for row in original_data
+        ]
+        self._column_selection = list(self._fields.keys())
+        self._column_sources = list(self._fields.keys())
+        self.endResetModel()
+
     def removeColumns(self, column: int, count: int, parent: QModelIndex = QModelIndex()):
         keys = tuple(self._fields.keys())[column: column + count]
         self.beginRemoveColumns(parent, column, column + count - 1)
@@ -169,16 +239,20 @@ class OdooModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DisplayRole\
                 or role == Qt.ItemDataRole.EditRole:
-            field_name = tuple(self._fields.keys())[index.column()]
-            return self._data[index.row()][field_name]
+            field_name = self.columnSelection()[index.column()]
+            if field_name is None:
+                return None
+            return self._data[index.row()][self._column_source(index.column())]
 
         return QVariant()
 
     def setData(self, index: QModelIndex, value: QVariant, role: int = ...):
         if not index.isValid():
             return False
-        field_name = tuple(self._fields.keys())[index.column()]
-        self._data[index.row()][field_name] = value
+        field_name = self.columnSelection()[index.column()]
+        if field_name is None:
+            return False
+        self._data[index.row()][self._column_source(index.column())] = value
         self.dataChanged.emit(index, index, (role,))
         return True
 
@@ -188,14 +262,22 @@ class OdooModel(QAbstractTableModel):
                 raise IndexError()
 
             if role == Qt.ItemDataRole.DisplayRole:
-                name = tuple(field for field in self._fields.values())[section]
-                return tuple(field for field in self._fields.values())[section].get('string', name)
+                field_name = self.columnSelection()[section]
+                if field_name is None:
+                    return 'Ignored column'
+                field = self._fields[field_name]
+                return field.get('string', field_name)
 
             if role == Qt.ItemDataRole.ToolTipRole:
-                return tuple(field for field in self._fields.values())[section].get('help', '')
+                field_name = self.columnSelection()[section]
+                if field_name is None:
+                    return 'This column will be ignored when applying the import.'
+                return self._fields[field_name].get('help', '')
 
             if role == Qt.ItemDataRole.UserRole:
-                name = tuple(field for field in self._fields.keys())[section]
+                name = self.columnSelection()[section]
+                if name is None:
+                    return {}
                 return {name: self._fields[name]}
 
         if orientation == Qt.Orientation.Vertical:

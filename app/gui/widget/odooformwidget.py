@@ -37,6 +37,8 @@ class OdooFormWidget(QWidget):
             fields=('id', 'display_name'))
         self.changeCompany.connect(supplier_model.updateCompany)
         self.supplier_selector.setModel(supplier_model)
+        self.company_id = getattr(parent, "company_id", None)
+        self.changeCompany.connect(self._set_company)
 
         self.reference = QLineEdit()
 
@@ -48,13 +50,19 @@ class OdooFormWidget(QWidget):
 
     def model(self):
         # return self.__model
-        return {
+        values = {
             '_data': [{
                 'partner_id': self.supplier_selector.currentData(),
                 'partner_ref': self.reference.text(),
                 'state': 'draft'
             }]
         }
+        if self.company_id is not None:
+            values['_data'][0]['company_id'] = self.company_id
+        return values
+
+    def _set_company(self, company_id: int):
+        self.company_id = company_id
 
     def setModel(self, model: OdooModel):
         self.__model = model

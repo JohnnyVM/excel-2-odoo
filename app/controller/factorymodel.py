@@ -8,9 +8,6 @@ from ..dependencies import get_odoo
 from ..gui.model.odoomodel import OdooModel
 
 
-MANDATORY_FIELDS = ['barcode', 'name', 'taxes_id', 'supplier_taxes_id', 'list_price']
-
-
 def text2many2manyfield(text, model: OdooModel):
     for data in model._data:
         if str(text) in data['display_name']:
@@ -51,15 +48,6 @@ def factoryExcelOdooModel(excel_file: str, parent):
         'product.template',
         'fields_get',
         [fields])
-    for mfield in MANDATORY_FIELDS:
-        if mfield not in fields:
-            qInfo(f"missing field {mfield}")
-            if csv_file:
-                csv_file.close()
-            if wb:
-                wb.close()
-            return
-
     # ensure the order
     for field in fields:
         if field in raw_fields:
