@@ -77,7 +77,7 @@ def factoryExcelOdooModel(excel_file: str, parent):
     # Keep spreadsheet columns as sources; only matched Odoo fields become keys.
     for index, (header, field) in enumerate(zip(fields, matched_fields)):
         source = str(header) if str(header) not in model._fields else f"{header}_{index}"
-        model._fields[source] = raw_fields[field] if field else {'string': str(header)}
+        model._fields[source] = selectable_fields[field] if field else {'string': str(header)}
         model._column_sources.append(source)
     for row in iter_rows:
         values = (
